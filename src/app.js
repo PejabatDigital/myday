@@ -1,3 +1,5 @@
+import { initStore, readDay, writeDay, readDays, readWeek, writeWeek, flushPending } from "./store/index.js";
+
 (function(){
 "use strict";
 const $ = id => document.getElementById(id);
@@ -25,33 +27,25 @@ function normalize(d, date){
   return out;
 }
 
-const S = { mode:"loading", db:null, uid:null, date:todayISO(), day:null, noteTarget:"day",
-  paneOpen: lsGet("dp:pane")==="1", unsub:null, dirty:false, pendingRender:false, week:{}, carryIn:[],
-  view: lsGet("dp:view")==="month" ? "month" : "day", monthKey:null, monthDays:{}, monthUnsub:null };
+const S = { mode:"loading", date:todayISO(), target:todayISO(), day:null, noteTarget:"day",
+  paneOpen: lsGet("dp:pane")==="1", dirty:false, pendingRender:false, week:{}, carryIn:[],
+  view: lsGet("dp:view")==="month" ? "month" : "day", monthKey:null, monthDays:{} };
 const monthOf = d => d.slice(0,7);
+const errMsg = e => e && e.message || "unknown error";
 
-/* ---------- storage ---------- */
-const col = () => S.db.collection("data/users/"+S.uid);
-async function getDay(date){
-  if (S.mode==="db"){ const s = await col().doc(date).get(); return s.exists ? normalize(s.data(),date) : emptyDay(date); }
-  const raw = lsGet("dp:day:"+date); return raw ? normalize(JSON.parse(raw),date) : emptyDay(date);
-}
-async function putDay(date, body){
-  if (S.mode==="db") return col().doc(date).set(body);
-  lsSet("dp:day:"+date, JSON.stringify(body));
-  const idx = new Set(JSON.parse(lsGet("dp:index")||"[]")); idx.add(date); lsSet("dp:index", JSON.stringify([...idx]));
+/* ---------- storage (IndexedDB on this device, see src/store/) ---------- */
+async function getDay(date){ const d = await readDay(date); return d ? normalize(d,date) : emptyDay(date); }
+function putDay(date, body){
+  S.monthDays[date] = body;
+  return writeDay(date, body);
 }
 async function queryDays(lo, hi){ // inclusive lo, exclusive hi
-  if (S.mode==="db"){
-    const q = await col().where("date",">=",lo).where("date","<",hi).get();
-    return q.docs.filter(d=>{ const x=d.data(); return x && x.date; }).map(d=>normalize(d.data(), d.id));
-  }
-  const idx = JSON.parse(lsGet("dp:index")||"[]").filter(d=>d>=lo && d<hi);
-  return Promise.all(idx.map(getDay));
+  return (await readDays(lo, hi)).map(d=>normalize(d, d.date));
 }
 
 /* ---------- saving ---------- */
-let saveTimer=null, inflight=false, again=false;
+/* Saves run one after another, so they land in order. Each one snapshots its doc when queued. */
+let saveTimer=null, saving=Promise.resolve(), retryTimer=null;
 function changed(delay){
   S.dirty = true; S.week[S.date] = tally(S.day);
   clearTimeout(saveTimer); saveTimer = setTimeout(flush, delay==null?500:delay);
@@ -59,46 +53,40 @@ function changed(delay){
 }
 let monthTimer=null;
 function scheduleMonth(){ if (S.view!=="month") return; clearTimeout(monthTimer); monthTimer=setTimeout(renderMonth,250); }
-async function flush(){
+function queueSave(write){
+  saving = saving.then(write).then(()=>setFoot(), e=>{
+    setFoot("Couldn't save on this device ("+errMsg(e)+"). Retrying…");
+    // the failed write is still held in localStorage; flushPending retries it without overwriting anything newer
+    if (!retryTimer) retryTimer = setTimeout(()=>{ retryTimer = null; queueSave(flushPending); }, 3000);
+  });
+  return saving;
+}
+function flush(){
   clearTimeout(saveTimer);
-  if (inflight){ again = true; return; }
-  if (!S.dirty || !S.day) return;
-  inflight = true; S.dirty = false;
+  if (!S.dirty || !S.day) return saving;
+  S.dirty = false;
   S.day.updatedAt = new Date().toISOString();
   const date = S.date, body = JSON.parse(JSON.stringify(S.day));
-  try { await putDay(date, body); setFoot(); }
-  catch(e){
-    if (e && e.code==="unavailable"){ S.dirty = true; setTimeout(flush, 1500+Math.random()*1000); }
-    else setFoot("Couldn't save: "+(e&&e.message||"unknown error")+". Your last change may not be kept.");
-  }
-  inflight = false;
-  if (again || S.dirty){ again = false; flush(); }
+  return queueSave(()=>putDay(date, body));
 }
 document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState==="hidden"){ flush(); flushWeek(); } });
 window.addEventListener("pagehide", ()=>{ flush(); flushWeek(); });
 
 /* ---------- loading a day ---------- */
+let openSeq = 0;
 async function openDay(date){
+  const seq = ++openSeq, wk = weekStart(date);
+  S.target = date; // the day being opened; prev/next step from here so quick taps add up
   if (S.day) await flush();
-  if (S.unsub){ S.unsub(); S.unsub = null; }
-  S.date = date; S.noteTask = null; S.carryIn = [];
-  ensureWeekNote();
-  S.day = S.monthDays[date] ? normalize(S.monthDays[date], date) : emptyDay(date);
+  let day, week;
+  try { [day, week] = await Promise.all([getDay(date), S.wk.key===wk ? null : readWeek(wk)]); }
+  catch(e){ if (seq===openSeq){ S.target = S.date; setFoot("Couldn't open "+fmtShort(date)+" ("+errMsg(e)+")."); } return; }
+  if (seq!==openSeq) return; // a later openDay won
+  flush(); // anything typed while loading belongs to the day we're leaving
+  S.date = date; S.day = day; S.noteTask = null; S.carryIn = [];
+  if (S.wk.key!==wk){ flushWeek(); S.wk = {key:wk, note: week ? String(week.note||"") : "", dirty:false}; }
   if (S.view==="month") ensureMonth(monthOf(date));
   renderAll();
-  if (S.mode==="db"){
-    let first = true;
-    S.unsub = col().doc(date).onSnapshot(snap=>{
-      if (date!==S.date) return;
-      if (snap.metadata.hasPendingWrites || S.dirty || inflight) return;
-      const d = snap.exists ? normalize(snap.data(),date) : emptyDay(date);
-      if (!first && JSON.stringify(d)===JSON.stringify(S.day)) return;
-      first = false; S.day = d; S.week[date] = tally(d);
-      if (isEditing()) S.pendingRender = true; else renderAll();
-    }, err=>{ setFoot("Live sync stopped ("+err.code+"). Reload the page to reconnect."); });
-  } else {
-    S.day = await getDay(date); renderAll();
-  }
   loadWeek(); loadCarryIn();
 }
 function isEditing(){ const a = document.activeElement; return a && (a.tagName==="TEXTAREA"||a.tagName==="INPUT"||a.isContentEditable) && a.id!=="pick"; }
@@ -111,17 +99,9 @@ function monthRange(key){
 }
 function ensureMonth(key){
   if (S.monthKey===key) return;
-  if (S.monthUnsub){ S.monthUnsub(); S.monthUnsub=null; }
   S.monthKey = key; S.monthDays = {};
   const {lo,hi} = monthRange(key);
-  if (S.mode==="db"){
-    S.monthUnsub = col().where("date",">=",lo).where("date","<",hi).onSnapshot(q=>{
-      if (S.monthKey!==key) return;
-      const m = {}; q.docs.forEach(d=>{ const x=d.data(); if (x && x.date) m[d.id] = normalize(x, d.id); }); S.monthDays = m; renderMonth();
-    }, ()=>{});
-  } else if (S.mode==="local"){
-    queryDays(lo,hi).then(days=>{ if (S.monthKey!==key) return; days.forEach(d=>S.monthDays[d.date]=d); renderMonth(); }).catch(()=>{});
-  }
+  queryDays(lo,hi).then(days=>{ if (S.monthKey!==key) return; days.forEach(d=>{ if (!(d.date in S.monthDays)) S.monthDays[d.date]=d; }); renderMonth(); }).catch(()=>{});
 }
 function renderMonth(){
   $("month").hidden = S.view!=="month";
@@ -429,7 +409,7 @@ function renderEod(){
 /* Three kinds of note: one per task, one per day (dayNote), one per week (its own document "week-<Monday>"). */
 S.noteScope = ["task","day","week"].includes(lsGet("dp:scope")) ? lsGet("dp:scope") : "day";
 S.noteTask = null;
-S.wk = {key:null, note:"", dirty:false, unsub:null};
+S.wk = {key:null, note:"", dirty:false};
 const ed = $("ed");
 try { document.execCommand("styleWithCSS", false, false); } catch(e){}
 
@@ -473,32 +453,15 @@ function setNote(html){
   else { S.wk.note = html; S.wk.dirty = true; scheduleWeekSave(); }
 }
 
-/* week note storage */
-let wkTimer=null, wkInflight=false;
+/* week note storage (loaded alongside the day in openDay) */
+let wkTimer=null;
 function scheduleWeekSave(){ clearTimeout(wkTimer); wkTimer=setTimeout(flushWeek,700); }
-async function flushWeek(){
+function flushWeek(){
   clearTimeout(wkTimer);
-  if (wkInflight || !S.wk.dirty || !S.wk.key) return;
-  wkInflight = true; S.wk.dirty = false;
-  const key = S.wk.key, body = {weekOf:key, note:S.wk.note, updatedAt:new Date().toISOString()};
-  try { if (S.mode==="db") await col().doc("week-"+key).set(body); else lsSet("dp:week:"+key, JSON.stringify(body)); setFoot(); }
-  catch(e){ if (S.wk.key===key){ S.wk.dirty = true; setTimeout(flushWeek, 2000); } setFoot("Couldn't save the week note yet. Retrying…"); }
-  wkInflight = false;
-  if (S.wk.dirty && S.wk.key===key) scheduleWeekSave();
-}
-async function ensureWeekNote(){
-  const key = weekStart(S.date); if (S.wk.key===key || S.mode==="loading") return;
-  await flushWeek();
-  if (S.wk.unsub) S.wk.unsub();
-  S.wk = {key, note:"", dirty:false, unsub:null};
-  if (S.mode==="db"){
-    S.wk.unsub = col().doc("week-"+key).onSnapshot(snap=>{
-      if (S.wk.key!==key || snap.metadata.hasPendingWrites || S.wk.dirty || wkInflight) return;
-      const n = snap.exists ? String((snap.data()||{}).note||"") : "";
-      if (n===S.wk.note) return; S.wk.note = n; if (S.noteScope==="week") renderNotes();
-    }, ()=>{});
-  } else { try { const raw = lsGet("dp:week:"+key); S.wk.note = raw ? String(JSON.parse(raw).note||"") : ""; } catch(e){} }
-  if (S.noteScope==="week") renderNotes();
+  if (!S.wk.dirty || !S.wk.key) return saving;
+  S.wk.dirty = false;
+  const key = S.wk.key, body = {note:S.wk.note, updatedAt:new Date().toISOString()};
+  return queueSave(()=>writeWeek(key, body));
 }
 
 /* pane */
@@ -712,8 +675,8 @@ document.addEventListener("keydown", e=>{ if (e.key==="Escape"){ if(!menu.hidden
 window.addEventListener("resize", closeMenu); window.addEventListener("scroll", closeMenu, true);
 
 /* ---------- nav ---------- */
-$("prev").onclick = ()=> S.view==="month" ? shiftMonth(-1) : openDay(addDays(S.date,-1));
-$("next").onclick = ()=> S.view==="month" ? shiftMonth(1) : openDay(addDays(S.date,1));
+$("prev").onclick = ()=> S.view==="month" ? shiftMonth(-1) : openDay(addDays(S.target,-1));
+$("next").onclick = ()=> S.view==="month" ? shiftMonth(1) : openDay(addDays(S.target,1));
 $("vDay").onclick = ()=>setView("day");
 $("vMonth").onclick = ()=>setView("month");
 $("openDayBtn").onclick = ()=>{ setView("day"); window.scrollTo({top:0}); };
@@ -721,21 +684,22 @@ $("today").onclick = ()=>openDay(todayISO());
 $("pick").onchange = e=>{ if (e.target.value) openDay(e.target.value); };
 
 function setFoot(msg){
-  $("foot").textContent = msg || (S.mode==="db" ? "Synced to your Claude account · private to you" : "Saved in this browser only. Open from claude.ai to sync across devices.");
+  $("foot").textContent = msg || "Saved on this device only.";
 }
 
 /* ---------- boot ---------- */
 async function boot(){
   renderHeader(); renderWeek();
-  const c = window.claude;
-  if (c && typeof c.use==="function"){
-    try {
-      const [db,user] = await Promise.all([c.use("db"), c.use("user")]);
-      const id = user && typeof user.id==="function" ? await user.id() : null;
-      if (db && id){ S.db = db; S.uid = id; S.mode = "db"; }
-    } catch(e){}
+  try { await initStore(); }
+  catch(e){
+    $("listWrap").textContent = "";
+    const l = document.createElement("div"); l.className = "loading";
+    l.textContent = "Couldn't open storage on this device ("+errMsg(e)+"). If this is a private window, try a normal one.";
+    $("listWrap").append(l); return;
   }
-  if (S.mode==="loading") S.mode = "local";
+  // ask the browser not to clear our data under storage pressure
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+  S.mode = "local";
   setFoot();
   // roll to a new day if the page stays open past midnight
   let lastToday = todayISO();
