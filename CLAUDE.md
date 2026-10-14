@@ -220,8 +220,9 @@ weeks: {weekStart: {note}} }` (5 days, 2 weeks). Provide either a script
 2. ✅ **Local-first:** replace storage with IndexedDB behind getDay/putDay/queryDays.
    App fully works signed-out. Keep the current look for now so Amin can keep using it.
 3. **PWA:** manifest, icon set, service worker with update prompt. Test Add to Home
-   Screen on iPhone and iPad, and install on Mac. (Icon: keep the current one until
-   Amin approves a Clear day icon.)
+   Screen on iPhone and iPad, and install on Mac. (Icon: placeholder in
+   `public/icons/` (blue square, white done mark) until Amin approves a Clear day icon.
+   Manifest and theme colours use the current background; switch to `--bg` in step 5.)
 4. **Backend:** Worker API + D1 schema + migrations; wrangler config with preview and
    production environments.
 5. **Redesign — Clear day:** replace `:root` tokens and styles, swap fonts to

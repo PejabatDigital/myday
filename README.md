@@ -15,6 +15,17 @@ npm run preview    # serve the built dist/ locally
 npm test           # unit tests (Vitest)
 ```
 
+## Install it as an app
+
+The service worker only runs in a production build, and only over HTTPS (or on `localhost`).
+
+- **Mac:** `npm run build && npm run preview`, open http://localhost:4173 in Chrome (install
+  icon in the address bar) or Safari (File → Add to Dock).
+- **iPhone / iPad:** needs an HTTPS address. Open it in Safari → Share → Add to Home Screen.
+
+After a new build is deployed, the open app shows "A new version of MyDay is ready".
+Tap **Refresh** to switch.
+
 ## Where things live
 
 | Path | What |
@@ -23,7 +34,8 @@ npm test           # unit tests (Vitest)
 | `src/styles.css` | All styles; design tokens live in `:root` |
 | `src/app.js` | App logic and rendering |
 | `src/store/` | On-device storage (IndexedDB) |
-| `public/` | Static files copied as-is into the build (icons, manifest) |
+| `src/sw.js`, `src/pwa.js` | Service worker (offline + updates) and its registration; `vite.config.js` builds `dist/sw.js` |
+| `public/` | Static files copied as-is into the build: `manifest.webmanifest`, `icons/` |
 | `legacy/myday-artifact.html` | The original single-file Claude artifact, kept for reference |
 | `CLAUDE.md` | Project brief for Claude Code: stack, design, data model, sync, build order |
 
