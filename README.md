@@ -1,6 +1,6 @@
 # MyDay
 
-MyDay — a no-frills daily planner modelled on a paper schedule: tasks and notes side by side, end-of-day carry-forward, and a minimal month view. Offline-first, synced across devices. A Kasah Kod app.
+MyDay — a no-frills daily planner: today's tasks and notes together, end-of-day carry-forward, and a minimal month view. Offline-first, synced across devices. A Kasah Kod app.
 
 ## Run it
 
@@ -23,7 +23,14 @@ npm run preview    # serve the built dist/ locally
 | `src/app.js` | All app logic |
 | `public/` | Static files copied as-is into the build (icons, manifest) |
 | `legacy/myday-artifact.html` | The original single-file Claude artifact, kept for reference |
-| `CLAUDE.md` | Project brief: stack, data model, sync design, build order |
+| `CLAUDE.md` | Project brief for Claude Code: stack, design, data model, sync, build order |
+
+## Design
+
+The app is moving to a new look, **Clear day**. The Figma file is the source of truth:
+[MyDay — App Design](https://www.figma.com/design/7HHfGaTye4sIoSabAMCsxT).
+
+## Status
 
 Data is currently stored in the browser's localStorage, one copy per browser.
-IndexedDB and cross-device sync arrive in later build steps (see `CLAUDE.md`).
+IndexedDB, cross-device sync and the new design arrive in later build steps (see `CLAUDE.md`).
