@@ -230,7 +230,7 @@ weeks: {weekStart: {note}} }` (5 days, 2 weeks). Provide either a script
    src/styles.css / src/app.js, README, .gitignore, CHANGELOG, package.json 0.1.0.
 2. ✅ **Local-first:** replace storage with IndexedDB behind getDay/putDay/queryDays.
    App fully works signed-out. Keep the current look for now so Amin can keep using it.
-3. **PWA:** manifest, icon set, service worker with update prompt. Test Add to Home
+3. ✅ **PWA:** manifest, icon set, service worker with update prompt. Test Add to Home
    Screen on iPhone and iPad, and install on Mac. (Icon: final, see
    Design → App icon. Manifest and theme colours use the current background; switch to
    `--bg` in step 5.)
