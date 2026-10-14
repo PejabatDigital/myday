@@ -200,7 +200,7 @@ weeks: {weekStart: {note}} }` (5 days, 2 weeks). Provide either a script
 ## Build order
 1. ✅ **Repo setup** — Vite project, legacy file split into index.html /
    src/styles.css / src/app.js, README, .gitignore, CHANGELOG, package.json 0.1.0.
-2. **Local-first:** replace storage with IndexedDB behind getDay/putDay/queryDays.
+2. ✅ **Local-first:** replace storage with IndexedDB behind getDay/putDay/queryDays.
    App fully works signed-out. Keep the current look for now so Amin can keep using it.
 3. **PWA:** manifest, icon set, service worker with update prompt. Test Add to Home
    Screen on iPhone and iPad, and install on Mac. (Icon: keep the current one until
