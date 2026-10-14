@@ -2,17 +2,20 @@
   "name": "myday",
   "version": "0.1.0",
   "private": true,
-  "description": "A no-frills daily planner modelled on a paper schedule. A Kasah Kod app.",
+  "description": "A no-frills daily planner: today's tasks and notes together. Offline-first. A Kasah Kod app.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "engines": {
     "node": ">=22.12.0"
   },
   "devDependencies": {
-    "vite": "8.3.4"
+    "fake-indexeddb": "6.2.5",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
   }
 }
