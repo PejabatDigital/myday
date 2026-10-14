@@ -19,14 +19,11 @@
     { "binding": "DB", "database_name": "myday-production", "database_id": "f5c16272-c408-4f8b-8848-2ae190cd0663", "migrations_dir": "migrations" }
   ],
 
-  "env": {
-    // Preview: a separate "myday-preview" Worker with its own database, deployed from
-    // non-production branches with `wrangler deploy --env preview`.
-    "preview": {
-      "name": "myday-preview",
-      "d1_databases": [
-        { "binding": "DB", "database_name": "myday-preview", "database_id": "8d4209d4-0ca6-4e2c-bcb9-b408bbe8ab77", "migrations_dir": "migrations" }
-      ]
-    }
+  // Previews: every non-production branch gets its own preview of this Worker
+  // (Workers Builds runs `wrangler preview`), always on the separate preview database.
+  "previews": {
+    "d1_databases": [
+      { "binding": "DB", "database_name": "myday-preview", "database_id": "8d4209d4-0ca6-4e2c-bcb9-b408bbe8ab77", "migrations_dir": "migrations" }
+    ]
   }
 }

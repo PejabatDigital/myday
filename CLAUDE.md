@@ -44,8 +44,9 @@ Every Kasah Kod app follows this same baseline.
   - Multi-user from day one: every row keyed by `user_id`; the API only ever
     reads/writes the signed-in user's rows.
 - **Hosting:** GitHub repo → Cloudflare Workers Builds. `main` deploys the `myday` Worker
-  (production, D1 `myday-production`); other branches deploy `myday-preview` (D1
-  `myday-preview`) via `wrangler deploy --env preview`. Subdomain `myday.kasahkod.cc`.
+  (production, D1 `myday-production`); other branches get their own preview of
+  `myday` (`wrangler preview`, the Workers Builds default) on D1 `myday-preview`, set in
+  the `previews` block of `wrangler.jsonc`. Subdomain `myday.kasahkod.cc`.
 
 ## Design — Clear day
 **Source of truth:** Figma file "MyDay — App Design"

@@ -1,0 +1,9 @@
+// Only for `npm run db:migrate:preview`: points migration commands at the preview
+// database, which wrangler.jsonc lists under "previews" (where they can't see it).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "myday",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "myday-preview", "database_id": "8d4209d4-0ca6-4e2c-bcb9-b408bbe8ab77", "migrations_dir": "migrations" }
+  ]
+}

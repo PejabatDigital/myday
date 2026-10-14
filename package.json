@@ -11,7 +11,7 @@
     "test": "vitest run",
     "dev:api": "wrangler dev --port 8787",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
-    "db:migrate:preview": "wrangler d1 migrations apply DB --remote --env preview",
+    "db:migrate:preview": "wrangler d1 migrations apply DB --remote -c wrangler.preview-db.jsonc",
     "db:migrate:production": "wrangler d1 migrations apply DB --remote"
   },
   "engines": {

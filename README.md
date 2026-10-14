@@ -34,10 +34,13 @@ Until sign-in is built, a deployed API answers "Sign in required" to every data 
 
 Cloudflare Workers Builds deploys from GitHub:
 
-| Branch | Worker | Database | Command |
+| Branch | Deploys | Database | Command |
 | --- | --- | --- | --- |
-| `main` | `myday` (production) | `myday-production` | `npx wrangler deploy` |
-| any other | `myday-preview` | `myday-preview` | `npx wrangler deploy --env preview` |
+| `main` | the `myday` Worker (production) | `myday-production` | `npx wrangler deploy` |
+| any other | a preview of `myday` for that branch | `myday-preview` | `npx wrangler preview` |
+
+The preview database is set in the `previews` block of `wrangler.jsonc`, so previews
+never touch production data.
 
 Build command for both: `npm run build`.
 
@@ -75,7 +78,7 @@ Tap **Refresh** to switch.
 | `src/store/` | On-device storage (IndexedDB) |
 | `worker/` | The API (Cloudflare Worker): routes, validation, database queries, tests |
 | `migrations/` | D1 database schema, one SQL file per change |
-| `wrangler.jsonc` | Worker, assets and database config for production and preview |
+| `wrangler.jsonc` | Worker, assets and database config for production and branch previews (`wrangler.preview-db.jsonc` is only for preview migrations) |
 | `src/sw.js`, `src/pwa.js` | Service worker (offline + updates) and its registration; `vite.config.js` builds `dist/sw.js` |
 | `public/` | Static files copied as-is into the build: `manifest.webmanifest`, `favicon.ico`, `icons/` |
 | `resources/icon-1024.png` | App icon master (not shipped; for a future native wrap) |
