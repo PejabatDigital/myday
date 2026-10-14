@@ -35,7 +35,8 @@ Tap **Refresh** to switch.
 | `src/app.js` | App logic and rendering |
 | `src/store/` | On-device storage (IndexedDB) |
 | `src/sw.js`, `src/pwa.js` | Service worker (offline + updates) and its registration; `vite.config.js` builds `dist/sw.js` |
-| `public/` | Static files copied as-is into the build: `manifest.webmanifest`, `icons/` |
+| `public/` | Static files copied as-is into the build: `manifest.webmanifest`, `favicon.ico`, `icons/` |
+| `resources/icon-1024.png` | App icon master (not shipped; for a future native wrap) |
 | `legacy/myday-artifact.html` | The original single-file Claude artifact, kept for reference |
 | `CLAUDE.md` | Project brief for Claude Code: stack, design, data model, sync, build order |
 

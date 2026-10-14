@@ -101,6 +101,17 @@ Secondary, Quiet, Danger) · Icon Button · Add Bar (Idle, Typing) · Week Day �
 Segmented Control · Month Cell (Large, Compact) · Sync Status · Toast · Text Field.
 Icons: 24px grid, 1.75 stroke, round caps/joins (Lucide-style; inline SVG is fine).
 
+### App icon — final (A3, Day Line; approved 14 Oct 2026)
+Figma: App Icon page, component "Icon A3 · Day Line, all white". Navy `#13204A`
+background, white Done mark (circle) with a blue `#2E5BFF` tick, and a Day Line
+underneath: three white segments and one blue. Colours: navy #13204A, white, blue #2E5BFF.
+All PNGs are full-bleed squares, no transparency or rounded corners (the OS applies its
+own mask). Maskable versions scale the artwork to 84% to sit inside the safe zone.
+Files: `public/icons/` (`icon.svg` master, `icon-192/512`, `icon-maskable-192/512`,
+`apple-touch-icon` 180, `favicon-16/32`), `public/favicon.ico` (16/32/48), and
+`resources/icon-1024.png` (master raster for a future Capacitor wrap; not shipped).
+Don't redraw or recolour it in code; changes start in Figma.
+
 ### Key interactions
 - **Status circle:** tap toggles open ↔ done. Press and hold a task → Task actions sheet
   (D2): mark done, missed (→ reason sheet D3), move to another day (→ D4), open note,
@@ -220,9 +231,9 @@ weeks: {weekStart: {note}} }` (5 days, 2 weeks). Provide either a script
 2. ✅ **Local-first:** replace storage with IndexedDB behind getDay/putDay/queryDays.
    App fully works signed-out. Keep the current look for now so Amin can keep using it.
 3. **PWA:** manifest, icon set, service worker with update prompt. Test Add to Home
-   Screen on iPhone and iPad, and install on Mac. (Icon: placeholder in
-   `public/icons/` (blue square, white done mark) until Amin approves a Clear day icon.
-   Manifest and theme colours use the current background; switch to `--bg` in step 5.)
+   Screen on iPhone and iPad, and install on Mac. (Icon: final, see
+   Design → App icon. Manifest and theme colours use the current background; switch to
+   `--bg` in step 5.)
 4. **Backend:** Worker API + D1 schema + migrations; wrangler config with preview and
    production environments.
 5. **Redesign — Clear day:** replace `:root` tokens and styles, swap fonts to
