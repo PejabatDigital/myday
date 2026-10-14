@@ -44,12 +44,7 @@ analytics, conflict screens.
 1. ✅ Repo setup.
 2. ✅ Device storage and offline.
 3. ✅ Installable app and final icon.
-4. **Online storage — finish and simplify.** Bring the `step-4-backend` work into `main`
-   and delete the step branches. Remove what's no longer wanted: the test files and test
-   tooling (Vitest, fake-indexeddb, `worker/test/`), the preview database setup
-   (`previews` block, `wrangler.preview-db.jsonc`) and the CHANGELOG. Delete the
-   `myday-preview` database with wrangler if you can; if not, tell Amin it's safe to
-   delete in Cloudflare. Check the live app still loads at myday.kasahkod.cc.
+4. ✅ Online storage (Worker API + D1 `myday-production`), live at myday.kasahkod.cc.
 5. **Google sign-in.** "Continue with Google" (Better Auth's Google provider, basic
    profile + email only). Stay signed in for a long time (~60 days, renewing) so the
    installed app rarely asks again. A simple way to sign out. The app still works
