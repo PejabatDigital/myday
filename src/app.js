@@ -1,5 +1,6 @@
 import { initStore, readDay, writeDay, readDays, readWeek, writeWeek, flushPending } from "./store/index.js";
 import { registerSW } from "./pwa.js";
+import { currentUser, signIn, signOut } from "./account.js";
 
 (function(){
 "use strict";
@@ -688,6 +689,22 @@ function setFoot(msg){
   $("foot").textContent = msg || "Saved on this device only.";
 }
 
+/* ---------- account ---------- */
+S.user = null;
+function renderAccount(){
+  const a = $("acct"); a.textContent = "";
+  const button = (label, run)=>{ const b = document.createElement("button"); b.textContent = label;
+    b.onclick = async ()=>{ b.disabled = true; try { await run(); } catch(e){ setFoot(navigator.onLine ? "Something went wrong ("+errMsg(e)+"). Please try again." : "You're offline. Try again when you're back online."); } b.disabled = false; };
+    return b; };
+  if (S.user){
+    const who = document.createElement("span"); who.textContent = "Signed in as "+(S.user.email || S.user.name);
+    a.append(who, button("Sign out", async ()=>{ await signOut(); S.user = null; renderAccount(); }));
+  } else {
+    a.append(button("Sign in with Google", async ()=>{ await Promise.all([flush(), flushWeek()]); await signIn(); }));
+  }
+  const p = document.createElement("a"); p.href = "/privacy"; p.textContent = "Privacy"; a.append(p);
+}
+
 /* ---------- new version ---------- */
 function offerUpdate(apply){
   const t = $("toast"); t.textContent = "";
@@ -712,6 +729,7 @@ async function boot(){
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
   S.mode = "local";
   setFoot();
+  currentUser().then(u=>{ S.user = u; renderAccount(); });
   // roll to a new day if the page stays open past midnight
   let lastToday = todayISO();
   setInterval(()=>{ const t = todayISO(); if (t!==lastToday){ const wasToday = S.date===lastToday; lastToday=t; if (wasToday && !isEditing()) openDay(t); else renderWeek(); } }, 60000);

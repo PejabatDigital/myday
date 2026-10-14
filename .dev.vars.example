@@ -1,3 +1,6 @@
-# Local development only. Copy to .dev.vars (git-ignored); never put real secrets here.
-# Signs every localhost API request in as this user until real sign-in arrives (step 6).
-DEV_USER_ID=dev
+# Local development only: copy to .dev.vars (git-ignored, never committed).
+BETTER_AUTH_URL=http://localhost:8787
+# Any long random string, e.g. the output of: openssl rand -base64 32
+BETTER_AUTH_SECRET=
+# From Google Cloud Console → Google Auth Platform → Clients → MyDay web
+GOOGLE_CLIENT_SECRET=

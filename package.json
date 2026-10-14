@@ -20,6 +20,7 @@
     "wrangler": "4.151.0"
   },
   "dependencies": {
+    "better-auth": "1.7.7",
     "zod": "4.6.7"
   }
 }

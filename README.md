@@ -26,12 +26,13 @@ npm run build            # production build into dist/
 The API and its database (Cloudflare Worker + D1), locally:
 
 ```sh
-cp .dev.vars.example .dev.vars   # once: signs local API requests in as a dev user
+cp .dev.vars.example .dev.vars   # once, then fill in the sign-in secrets
 npm run db:migrate:local         # once, and after adding a migration
 npm run build && npm run dev:api # app + API at http://localhost:8787
 ```
 
-While `dev:api` runs, `npm run dev` forwards `/api` to it.
+While `dev:api` runs, `npm run dev` forwards `/api` to it. Test Google sign-in on
+http://localhost:8787 (the address registered with Google).
 
 ## Database
 
