@@ -24,5 +24,7 @@ function serviceWorker(){
 }
 
 export default defineConfig({
-  plugins: [serviceWorker()]
+  plugins: [serviceWorker()],
+  // npm run dev:api runs the Worker and its local database on 8787
+  server: { proxy: { "/api": "http://localhost:8787" } }
 });

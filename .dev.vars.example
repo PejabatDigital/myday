@@ -1,0 +1,3 @@
+# Local development only. Copy to .dev.vars (git-ignored); never put real secrets here.
+# Signs every localhost API request in as this user until real sign-in arrives (step 6).
+DEV_USER_ID=dev
