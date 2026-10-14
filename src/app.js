@@ -1,4 +1,5 @@
 import { initStore, readDay, writeDay, readDays, readWeek, writeWeek, flushPending } from "./store/index.js";
+import { registerSW } from "./pwa.js";
 
 (function(){
 "use strict";
@@ -687,8 +688,18 @@ function setFoot(msg){
   $("foot").textContent = msg || "Saved on this device only.";
 }
 
+/* ---------- new version ---------- */
+function offerUpdate(apply){
+  const t = $("toast"); t.textContent = "";
+  const msg = document.createElement("span"); msg.textContent = "A new version of MyDay is ready";
+  const b = document.createElement("button"); b.className = "btn pen"; b.textContent = "Refresh";
+  b.onclick = async ()=>{ b.disabled = true; await Promise.all([flush(), flushWeek()]); apply(); };
+  t.append(msg, b); t.hidden = false;
+}
+
 /* ---------- boot ---------- */
 async function boot(){
+  registerSW(offerUpdate);
   renderHeader(); renderWeek();
   try { await initStore(); }
   catch(e){

@@ -101,6 +101,17 @@ Secondary, Quiet, Danger) · Icon Button · Add Bar (Idle, Typing) · Week Day �
 Segmented Control · Month Cell (Large, Compact) · Sync Status · Toast · Text Field.
 Icons: 24px grid, 1.75 stroke, round caps/joins (Lucide-style; inline SVG is fine).
 
+### App icon — final (A3, Day Line; approved 14 Oct 2026)
+Figma: App Icon page, component "Icon A3 · Day Line, all white". Navy `#13204A`
+background, white Done mark (circle) with a blue `#2E5BFF` tick, and a Day Line
+underneath: three white segments and one blue. Colours: navy #13204A, white, blue #2E5BFF.
+All PNGs are full-bleed squares, no transparency or rounded corners (the OS applies its
+own mask). Maskable versions scale the artwork to 84% to sit inside the safe zone.
+Files: `public/icons/` (`icon.svg` master, `icon-192/512`, `icon-maskable-192/512`,
+`apple-touch-icon` 180, `favicon-16/32`), `public/favicon.ico` (16/32/48), and
+`resources/icon-1024.png` (master raster for a future Capacitor wrap; not shipped).
+Don't redraw or recolour it in code; changes start in Figma.
+
 ### Key interactions
 - **Status circle:** tap toggles open ↔ done. Press and hold a task → Task actions sheet
   (D2): mark done, missed (→ reason sheet D3), move to another day (→ D4), open note,
@@ -128,10 +139,27 @@ S4 Your data · S5 Delete account · S6 Goodbye · S7 About · X1 Sync details �
 X2 Conflict notice · X3 Toasts · X4 Offline state · X5 Not found · L1 Privacy · L2 Terms.
 No splash screen (dropped 14 Oct 2026); the launch screen is just `--bg`.
 
+### Layouts by device
+- **Phone (390 wide):** single column. Header icons (Month, Notes, Settings), Day Line,
+  week strip, lists, floating Add Bar at the bottom. Notes is a bottom sheet (half height,
+  drag to full). Task actions, missed reason and move are bottom sheets.
+- **iPad landscape (1180 wide):** Day on the left, Notes as a persistent panel on the
+  right (~432px); the note icon toggles it and shows an active state. Month: large grid
+  (up to three tasks per cell) with the selected day in a right panel (~360px).
+  Sheets become popovers anchored to the task. iPad portrait falls back to phone layout.
+- **Mac / desktop (1440 wide):** left sidebar (264px: MyDay mark, Today / Month /
+  Week note, mini month, sync status, Settings) replaces the header icons and week
+  strip; Day in the centre with the Add Bar at the **top** of the list; Notes panel on
+  the right (~420px) showing the selected task's note. Month: sidebar + full grid +
+  selected-day panel. Keyboard: N add task, Space complete selected, ← → change day,
+  T today.
+- Breakpoints (suggested): phone < 768, tablet 768–1279, desktop ≥ 1280.
+
 **Design status (14 Oct 2026):** final in Figma — tokens, components, flows, all Day
-screens (D1–D5). In progress — Month (M1), Notes (N1), and the iPad/desktop Day layout.
-Not separately designed — sign-in, Settings and system screens: build them from the
-components and the screen list above, then show Amin before polishing.
+screens (D1–D5), Month (M1), Notes (N1: day, task, week tabs), and the iPad and Mac
+layouts for Day and Month. Not separately designed — sign-in, Settings and system
+screens: build them from the components and the screen list above, then show Amin
+before polishing.
 
 ## Data model (matches the legacy artifact — keep these shapes)
 Day document, keyed by ISO date `YYYY-MM-DD`:
@@ -203,14 +231,14 @@ weeks: {weekStart: {note}} }` (5 days, 2 weeks). Provide either a script
 2. ✅ **Local-first:** replace storage with IndexedDB behind getDay/putDay/queryDays.
    App fully works signed-out. Keep the current look for now so Amin can keep using it.
 3. **PWA:** manifest, icon set, service worker with update prompt. Test Add to Home
-   Screen on iPhone and iPad, and install on Mac. (Icon: keep the current one until
-   Amin approves a Clear day icon.)
+   Screen on iPhone and iPad, and install on Mac. (Icon: final, see
+   Design → App icon. Manifest and theme colours use the current background; switch to
+   `--bg` in step 5.)
 4. **Backend:** Worker API + D1 schema + migrations; wrangler config with preview and
    production environments.
 5. **Redesign — Clear day:** replace `:root` tokens and styles, swap fonts to
-   Instrument Sans, rebuild the Day screen (D1–D5) to match Figma, then Month (M1) and
-   Notes (N1) once their frames are final. Behaviour stays the same. Ship Day first if
-   Month/Notes designs aren't ready.
+   Instrument Sans, rebuild Day (D1–D5), Month (M1) and Notes (N1) to match Figma,
+   including the iPad and Mac layouts. Behaviour stays the same.
 6. **Sign-in:** Better Auth (magic link via Resend), session cookie, sign-in screens
    A1–A5 in the Clear day style, sign out, then passkeys.
 7. **Sync:** push/pull loop, conflict rule, Sync Status; test two devices editing

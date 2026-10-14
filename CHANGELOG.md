@@ -6,6 +6,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-14
+
+### Added
+- Installable app (PWA): web app manifest, iOS home-screen tags, and the final app
+  icon (A3, Day Line): manifest, maskable, Apple touch and favicon sizes.
+- Service worker: the app and its fonts are cached, so MyDay opens and works offline.
+- "A new version of MyDay is ready" toast. The new version only takes over when you
+  tap Refresh, after any unsaved edits are written.
+
+### Changed
+- Safe-area padding now also covers the left and right edges (iPhone in landscape).
+
 ## [0.2.0] - 2026-10-14
 
 ### Changed

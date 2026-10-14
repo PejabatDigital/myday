@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>MyDay</title>
+  <rect width="1024" height="1024" fill="#13204A"/>
+  <circle cx="512" cy="420" r="190" fill="#FFFFFF"/>
+  <path d="M447 425 L489 467 L577 375" fill="none" stroke="#2E5BFF" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="176" y="730" width="150" height="44" rx="22" fill="#FFFFFF"/>
+  <rect x="350" y="730" width="150" height="44" rx="22" fill="#FFFFFF"/>
+  <rect x="524" y="730" width="150" height="44" rx="22" fill="#FFFFFF"/>
+  <rect x="698" y="730" width="150" height="44" rx="22" fill="#2E5BFF"/>
+</svg>
