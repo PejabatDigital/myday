@@ -30,7 +30,10 @@ Every Kasah Kod app follows this same baseline.
 - **PWA:** `manifest.webmanifest` (name "MyDay", standalone), service worker caching
   the app shell, `apple-touch-icon` + iOS meta tags, safe-area insets.
 - **Local store:** IndexedDB as the source of truth on each device (offline-first).
-- **Backend:** Cloudflare Pages (static) + Pages Functions / Worker API + **D1**.
+- **Backend:** one Cloudflare **Worker with static assets** (the built app from `dist/`)
+  + the API in `worker/` (runs only for `/api/*`) + **D1**. Config: `wrangler.jsonc`.
+  (Chosen 14 Oct 2026 over Pages: the repo was connected as a Worker, and it's
+  Cloudflare's recommended path.)
 - **Auth:** real in-app sign-in (NOT Cloudflare Access — that can't live inside a
   future native wrapper). Use **Better Auth** on the Worker with D1 as its store:
   - Email **magic link** as the primary method (send via Resend's free tier).
@@ -40,7 +43,9 @@ Every Kasah Kod app follows this same baseline.
   - If Google sign-in is ever added, Sign in with Apple must be added too.
   - Multi-user from day one: every row keyed by `user_id`; the API only ever
     reads/writes the signed-in user's rows.
-- **Hosting:** GitHub repo → Cloudflare Pages, subdomain `myday.kasahkod.cc`.
+- **Hosting:** GitHub repo → Cloudflare Workers Builds. `main` deploys the `myday` Worker
+  (production, D1 `myday-production`); other branches deploy `myday-preview` (D1
+  `myday-preview`) via `wrangler deploy --env preview`. Subdomain `myday.kasahkod.cc`.
 
 ## Design — Clear day
 **Source of truth:** Figma file "MyDay — App Design"
@@ -172,9 +177,11 @@ Week note, keyed by week-start date (Monday): `{ "note": "<html>" }`.
 Notes are contentEditable HTML (bold, h3, lists, checklists `ul.chk li[data-done]`, links).
 Keep the stored status value `cf`; the UI calls it "Carried".
 
-Suggested D1 tables:
-- `days(user_id, date, body JSON, updated_at, PRIMARY KEY(user_id, date))`
-- `weeks(user_id, week_start, note TEXT, updated_at, PRIMARY KEY(user_id, week_start))`
+D1 tables (`migrations/0001_init.sql`):
+- `days(user_id, date, body JSON, updated_at, version, PRIMARY KEY(user_id, date))`
+- `weeks(user_id, week_start, note TEXT, updated_at, version, PRIMARY KEY(user_id, week_start))`
+- `sync_seq(user_id, seq)`: per-user change counter. Every stored write takes the next
+  number as its `version`; that number is the sync cursor.
 
 ## Sync design
 - Every edit writes to IndexedDB immediately and marks the doc dirty (keep the existing
@@ -182,8 +189,14 @@ Suggested D1 tables:
 - A sync loop pushes dirty docs (`PUT /api/days/:date`, `PUT /api/weeks/:start`) and
   pulls changes (`GET /api/changes?since=<cursor>`). Run on load, on focus/visibilitychange,
   on reconnect, and every ~30 s while visible.
+- API (built in step 4, `worker/api.js`): `PUT /api/days/:date`, `PUT /api/weeks/:start`
+  (a Monday; body `{note, updatedAt}`) → `{ok, version}`; `GET /api/changes?since=N&limit=`
+  → `{days, weeks, cursor, more}`, oldest first; `GET /api/health`. Until sign-in (step 6)
+  every data route answers 401 when deployed; locally `DEV_USER_ID` in `.dev.vars` signs
+  localhost requests in.
 - Conflict rule: whole-document last-write-wins by `updatedAt`, server timestamp as
-  tiebreak. Never drop a newer local edit silently — if the server is newer while local
+  tiebreak. The server enforces it: a PUT older than the stored doc gets **409** with the
+  server's copy (`{error:"conflict", server}`); on a tie the later arrival wins. Never drop a newer local edit silently — if the server is newer while local
   is dirty, keep both (stash the losing version) and surface the Conflict notice (X2).
 - Sync Status component replaces "Synced to your Claude account": "Synced just now",
   "Syncing", "Offline. Changes are saved on this device.", "Couldn't sync. Tap to try again."
@@ -219,8 +232,8 @@ weeks: {weekStart: {note}} }` (5 days, 2 weeks). Provide either a script
 - **Privacy-friendly analytics only:** Cloudflare Web Analytics (cookieless) or none.
 - **Accessibility:** keyboard reachable, visible focus, labels on icon buttons,
   respects reduced motion, contrast checked in both themes.
-- **Reliability:** separate `preview` and `production` environments (own D1 each);
-  D1 Time Travel noted as the backup/restore path; schema changes only via migrations.
+- **Reliability:** separate `preview` and `production` environments (own Worker and D1
+  each, see Hosting); D1 Time Travel is the backup/restore path (see README); schema changes only via migrations.
 - **Quality:** Vitest for the sync/merge logic, Playwright smoke test (sign in → add
   task → reload offline → still there); GitHub Actions runs them on every PR.
 - **Versioning:** semver in package.json, shown in Settings; CHANGELOG.md.

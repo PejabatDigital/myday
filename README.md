@@ -15,6 +15,45 @@ npm run preview    # serve the built dist/ locally
 npm test           # unit tests (Vitest)
 ```
 
+### The API and database locally
+
+The API is a Cloudflare Worker (`worker/`) with a D1 database. Locally it runs on
+Wrangler with a SQLite copy of the database in `.wrangler/`.
+
+```sh
+cp .dev.vars.example .dev.vars   # once: signs local API requests in as a dev user
+npm run db:migrate:local         # once, and after adding a migration
+npm run build                    # the Worker serves dist/, so build first
+npm run dev:api                  # app + API at http://localhost:8787
+```
+
+While `dev:api` runs, `npm run dev` (port 5173) forwards `/api` to it.
+Until sign-in is built, a deployed API answers "Sign in required" to every data request.
+
+## Deploying
+
+Cloudflare Workers Builds deploys from GitHub:
+
+| Branch | Worker | Database | Command |
+| --- | --- | --- | --- |
+| `main` | `myday` (production) | `myday-production` | `npx wrangler deploy` |
+| any other | `myday-preview` | `myday-preview` | `npx wrangler deploy --env preview` |
+
+Build command for both: `npm run build`.
+
+Database changes are SQL files in `migrations/`, applied with
+`npm run db:migrate:preview` and then `npm run db:migrate:production`. Never edit a
+migration that has been applied; add a new one.
+
+### Backups
+
+D1 keeps 30 days of history (Time Travel). To restore production to a point in time:
+
+```sh
+npx wrangler d1 time-travel info myday-production --timestamp=2026-10-14T09:00:00Z
+npx wrangler d1 time-travel restore myday-production --timestamp=2026-10-14T09:00:00Z
+```
+
 ## Install it as an app
 
 The service worker only runs in a production build, and only over HTTPS (or on `localhost`).
@@ -34,6 +73,9 @@ Tap **Refresh** to switch.
 | `src/styles.css` | All styles; design tokens live in `:root` |
 | `src/app.js` | App logic and rendering |
 | `src/store/` | On-device storage (IndexedDB) |
+| `worker/` | The API (Cloudflare Worker): routes, validation, database queries, tests |
+| `migrations/` | D1 database schema, one SQL file per change |
+| `wrangler.jsonc` | Worker, assets and database config for production and preview |
 | `src/sw.js`, `src/pwa.js` | Service worker (offline + updates) and its registration; `vite.config.js` builds `dist/sw.js` |
 | `public/` | Static files copied as-is into the build: `manifest.webmanifest`, `favicon.ico`, `icons/` |
 | `resources/icon-1024.png` | App icon master (not shipped; for a future native wrap) |

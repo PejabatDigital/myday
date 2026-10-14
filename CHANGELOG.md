@@ -6,6 +6,21 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
+### Added
+- API on a Cloudflare Worker (`worker/`): store a day (`PUT /api/days/:date`), store a
+  week note (`PUT /api/weeks/:weekStart`), list changes since a cursor
+  (`GET /api/changes`), and a health check. Every input is validated (zod), every
+  row is keyed by user, and an edit older than the stored one is refused with 409.
+  Data requests need sign-in, which arrives in a later step; the app doesn't call the
+  API yet.
+- D1 schema and migrations; separate preview (`myday-preview`) and production
+  (`myday-production`) databases.
+- `wrangler.jsonc`: the built app is served as Worker static assets; `/api/*` runs
+  the Worker.
+- Local API development (`npm run dev:api`, `npm run db:migrate:local`) and API tests.
+
 ## [0.3.0] - 2026-10-14
 
 ### Added
