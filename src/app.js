@@ -1,6 +1,8 @@
 import { initStore, readDay, writeDay, readDays, readWeek, writeWeek, flushPending } from "./store/index.js";
 import { registerSW } from "./pwa.js";
 import { currentUser, signOut } from "./account.js";
+import { emptyDay, normalize, esc, RICH } from "./day.js";
+import { createSync } from "./sync.js";
 
 (function(){
 "use strict";
@@ -17,17 +19,6 @@ const lsSet = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
 
 const ICON_NOTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3.5h9l3.5 3.5V20a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z"/><path d="M9 11h6M9 15h4"/></svg>';
 const ICON_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/></svg>';
-
-function emptyDay(date){ return {date, tasks:[], dayNote:""}; }
-function normalize(d, date){
-  d = d ? JSON.parse(JSON.stringify(d)) : {};
-  const out = {date, tasks:[], dayNote: typeof d.dayNote==="string" ? d.dayNote : ""};
-  if (Array.isArray(d.tasks)) out.tasks = d.tasks.filter(t=>t && t.id).map(t=>({
-    id:String(t.id), text:String(t.text||""), status:["open","done","missed","cf"].includes(t.status)?t.status:"open",
-    reason:String(t.reason||""), note:String(t.note||""), from:t.from||null, carried:t.carried||null }));
-  if (d.updatedAt) out.updatedAt = d.updatedAt;
-  return out;
-}
 
 const S = { mode:"loading", date:todayISO(), target:todayISO(), day:null, noteTarget:"day",
   paneOpen: lsGet("dp:pane")==="1", dirty:false, pendingRender:false, week:{}, carryIn:[],
@@ -56,7 +47,7 @@ function changed(delay){
 let monthTimer=null;
 function scheduleMonth(){ if (S.view!=="month") return; clearTimeout(monthTimer); monthTimer=setTimeout(renderMonth,250); }
 function queueSave(write){
-  saving = saving.then(write).then(()=>setFoot(), e=>{
+  saving = saving.then(write).then(()=>{ setFoot(); sync.soon(); }, e=>{
     setFoot("Couldn't save on this device ("+errMsg(e)+"). Retrying…");
     // the failed write is still held in localStorage; flushPending retries it without overwriting anything newer
     if (!retryTimer) retryTimer = setTimeout(()=>{ retryTimer = null; queueSave(flushPending); }, 3000);
@@ -71,7 +62,7 @@ function flush(){
   const date = S.date, body = JSON.parse(JSON.stringify(S.day));
   return queueSave(()=>putDay(date, body));
 }
-document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState==="hidden"){ flush(); flushWeek(); } });
+document.addEventListener("visibilitychange", ()=>{ if (document.visibilityState==="hidden"){ flush(); flushWeek(); sync.run(); } });
 window.addEventListener("pagehide", ()=>{ flush(); flushWeek(); });
 
 /* ---------- loading a day ---------- */
@@ -415,8 +406,6 @@ S.wk = {key:null, note:"", dirty:false};
 const ed = $("ed");
 try { document.execCommand("styleWithCSS", false, false); } catch(e){}
 
-const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const RICH = /<\/?(b|strong|i|em|u|s|strike|del|br|p|div|ul|ol|li|h[1-6]|blockquote|a)\b/i;
 const KEEP = {B:1,STRONG:1,I:1,EM:1,U:1,S:1,STRIKE:1,DEL:1,BR:1,P:1,DIV:1,UL:1,OL:1,LI:1,H3:1,BLOCKQUOTE:1,A:1};
 const DROP = /^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|META|LINK|TITLE|SVG|MATH|IMG|PICTURE|VIDEO|AUDIO|CANVAS|FORM|INPUT|BUTTON|TEXTAREA|SELECT|TEMPLATE|HEAD)$/;
 function clean(html){
@@ -685,8 +674,45 @@ $("openDayBtn").onclick = ()=>{ setView("day"); window.scrollTo({top:0}); };
 $("today").onclick = ()=>openDay(todayISO());
 $("pick").onchange = e=>{ if (e.target.value) openDay(e.target.value); };
 
+const SYNC_TEXT = {synced:"Synced", syncing:"Syncing…", offline:"Offline", error:"Couldn't sync"};
 function setFoot(msg){
-  $("foot").textContent = msg || "Saved on this device only.";
+  $("foot").textContent = msg || (S.user ? SYNC_TEXT[S.sync] || "Syncing…" : "Saved on this device only.");
+}
+
+/* ---------- sync (see src/sync.js) ---------- */
+S.sync = null;
+const sync = createSync({
+  user: ()=>S.user,
+  beforeSync: ()=>Promise.all([flush(), flushWeek()]),
+  onStatus: st=>{ S.sync = st; setFoot(); },
+  onSignedOut: async ()=>{ S.user = await currentUser(); if (!S.user) sync.stop(); renderAccount(); setFoot(); },
+  onRemote: showRemote,
+});
+
+/* Docs replaced by sync: show them, without disturbing anything being typed. */
+function showRemote({days, weeks}){
+  let redraw = false, carry = false;
+  days.forEach(doc=>{
+    const d = normalize(doc, doc.date);
+    S.week[d.date] = tally(d);
+    if (d.date in S.monthDays || (S.monthKey && monthOf(d.date)===S.monthKey)) S.monthDays[d.date] = d;
+    if (d.date < S.date) carry = true;
+    // unsaved edits here are newer, so they stay (and win when they're sent)
+    if (d.date===S.date && S.day && !S.dirty && (S.day.updatedAt||"") < (d.updatedAt||"")){ S.day = d; redraw = true; }
+  });
+  weeks.forEach(w=>{
+    if (w.weekStart===S.wk.key && !S.wk.dirty){ S.wk.note = String(w.note||""); redraw = true; }
+  });
+  if (redraw) redrawKeepingFocus(); else { renderWeek(); scheduleMonth(); }
+  if (carry) loadCarryIn();
+}
+function redrawKeepingFocus(){
+  const a = document.activeElement, id = a && a.id, adder = $("adder"), draft = adder ? adder.value : "";
+  let from = null, to = null; try { from = a.selectionStart; to = a.selectionEnd; } catch(e){}
+  renderAll(); // the notes editor keeps its text while it's being typed in
+  const ad = $("adder"); if (ad && draft){ ad.value = draft; autosize(ad); }
+  const el = id && $(id);
+  if (el && el!==document.activeElement){ el.focus(); try { if (from!=null) el.setSelectionRange(from, to); } catch(e){} }
 }
 
 /* ---------- account ---------- */
@@ -698,7 +724,7 @@ function renderAccount(){
     return b; };
   if (S.user){
     const who = document.createElement("span"); who.textContent = "Signed in as "+(S.user.email || S.user.name);
-    a.append(who, button("Sign out", async ()=>{ await signOut(); S.user = null; renderAccount(); }));
+    a.append(who, button("Sign out", async ()=>{ await Promise.all([flush(), flushWeek()]); await sync.run(); await signOut(); sync.stop(); S.user = null; renderAccount(); setFoot(); }));
   } else {
     const go = path => async ()=>{ await Promise.all([flush(), flushWeek()]); location.href = path; };
     a.append(button("Sign in", go("/signin")), button("Create account", go("/signin?mode=signup")));
@@ -730,7 +756,7 @@ async function boot(){
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
   S.mode = "local";
   setFoot();
-  currentUser().then(u=>{ S.user = u; renderAccount(); });
+  currentUser().then(u=>{ S.user = u; renderAccount(); setFoot(); if (u) sync.start(); });
   // roll to a new day if the page stays open past midnight
   let lastToday = todayISO();
   setInterval(()=>{ const t = todayISO(); if (t!==lastToday){ const wasToday = S.date===lastToday; lastToday=t; if (wasToday && !isEditing()) openDay(t); else renderWeek(); } }, 60000);

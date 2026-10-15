@@ -10,6 +10,7 @@ import { openDB, tx } from "./db.js";
 const PENDING = "dp:pending:";
 const MIGRATED = "dp:migrated-to-idb";
 const STORES = ["days", "weeks"];
+const KEYS = {days:"date", weeks:"weekStart"};
 
 let db = null;
 
@@ -51,8 +52,50 @@ export function readDays(lo, hi){ // inclusive lo, exclusive hi
 export const readWeek = weekStart => read("weeks", weekStart);
 export const writeWeek = (weekStart, doc) => write("weeks", weekStart, {...doc, weekStart});
 
-/* Docs changed on this device since they were last synced. */
+/* ---------- sync (see src/sync.js) ---------- */
+/* Docs changed on this device since they were last synced: [{key, store, id, at}]. */
 export function outbox(){ return tx(db, ["outbox"], "readonly", t=>t.objectStore("outbox").getAll()); }
+
+export const readDoc = (store, id) => read(store, id);
+export const writeDoc = (store, id, doc) => write(store, id, doc);
+export function readAll(store){ return tx(db, [store], "readonly", t=>t.objectStore(store).getAll()); }
+
+/* The server has this doc: clears its outbox entry, unless it was edited again meanwhile. */
+export function markSent(entry){
+  return tx(db, ["outbox"], "readwrite", t=>{
+    const o = t.objectStore("outbox"), req = o.get(entry.key);
+    req.onsuccess = () => { if (req.result && req.result.at===entry.at) o.delete(entry.key); };
+  });
+}
+
+/* Stores a doc that came from the server, unless this device holds the same or a newer edit.
+   Resolves true if it was stored. */
+export function applyRemote(store, doc){
+  const id = doc[KEYS[store]], key = store+":"+id;
+  let applied = false;
+  return tx(db, [store,"outbox"], "readwrite", t=>{
+    const req = t.objectStore(store).get(id);
+    req.onsuccess = () => {
+      if (req.result && !newer(doc, req.result)) return;
+      t.objectStore(store).put(doc);
+      t.objectStore("outbox").delete(key); // an older unsent edit here lost to the newer one
+      applied = true;
+    };
+  }).then(()=>applied);
+}
+
+/* Marks every doc on this device to be uploaded, except the given keys ("days:2026-10-15"). */
+export function queueAll(except){
+  return tx(db, [...STORES,"outbox"], "readwrite", t=>{
+    STORES.forEach(store=>{
+      const req = t.objectStore(store).getAll();
+      req.onsuccess = () => req.result.forEach(doc=>{
+        const id = doc[KEYS[store]], key = store+":"+id;
+        if (!except.has(key)) t.objectStore("outbox").put({key, store, id, at:doc.updatedAt||""});
+      });
+    });
+  });
+}
 
 /* Writes any copies left in localStorage by a write that never committed — unless IndexedDB
    already holds the same or a newer version. Runs on launch; safe to call any time. */

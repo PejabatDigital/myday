@@ -64,7 +64,9 @@ conflict screens.
    up, pull changes down, on open, on return to the app, on reconnect, and every ~30 s
    while open. Rule: the latest edit wins. Show the simple footer status (Synced /
    Syncing / Offline / Couldn't sync). When someone signs in for the first time, upload
-   whatever is already on that device.
+   whatever is already on that device. On a device's first sync, a day that exists both
+   on the device and online is combined (every task from both, both notes joined), not
+   replaced (Amin's choice). Built in `src/sync.js`; also syncs ~2 s after each save.
 7. **The new look.** Apply the Clear day design below to Day, Month and Notes, on phone,
    iPad and Mac. Behaviour stays exactly as it is today. Switch the manifest/theme colour
    to `--bg`. Build the sign-in button and sign-out in the same style.
