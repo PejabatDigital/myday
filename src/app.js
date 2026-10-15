@@ -17,8 +17,6 @@ const uid = () => Math.random().toString(36).slice(2,10);
 const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
 const lsSet = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
 
-const ICON_NOTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3.5h9l3.5 3.5V20a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z"/><path d="M9 11h6M9 15h4"/></svg>';
-const ICON_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/></svg>';
 
 const S = { mode:"loading", date:todayISO(), target:todayISO(), day:null, noteTarget:"day",
   paneOpen: lsGet("dp:pane")==="1", dirty:false, pendingRender:false, week:{}, carryIn:[],
@@ -96,6 +94,12 @@ function ensureMonth(key){
   const {lo,hi} = monthRange(key);
   queryDays(lo,hi).then(days=>{ if (S.monthKey!==key) return; days.forEach(d=>{ if (!(d.date in S.monthDays)) S.monthDays[d.date]=d; }); renderMonth(); }).catch(()=>{});
 }
+/* How a day went, for the dot under a date: missed (red), past (grey), today or ahead (blue). */
+function dayMark(tasks, ds){
+  if (!tasks.length) return "";
+  if (tasks.some(t=>t.status==="missed")) return "bad";
+  return ds < todayISO() ? "has" : "good";
+}
 function renderMonth(){
   $("month").hidden = S.view!=="month";
   if (S.view!=="month" || !S.monthKey) return;
@@ -108,17 +112,14 @@ function renderMonth(){
     c.className = "mc"+(monthOf(ds)!==S.monthKey?" out":"")+(ds===td?" today":"")+(ds===S.date?" sel":"");
     const done = tasks.filter(t=>t.status==="done").length;
     c.setAttribute("aria-label", parse(ds).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})+(tasks.length?`, ${done} of ${tasks.length} done`:", no tasks"));
-    const top = document.createElement("div"); top.className="mtop";
-    const md = document.createElement("span"); md.className="md"; md.textContent = parse(ds).getDate();
-    const mn = document.createElement("span"); mn.className="mn"; mn.textContent = tasks.length ? `${done}/${tasks.length}` : "";
-    top.append(md,mn); c.append(top);
-    const SHOW = 4;
+    const md = document.createElement("span"); md.className="md"; md.textContent = parse(ds).getDate(); c.append(md);
+    const SHOW = 3; // large cells (iPad, Mac) list up to three tasks; phones show a dot
     tasks.slice(0,SHOW).forEach(t=>{ const r=document.createElement("div"); r.className="mt "+t.status;
-      const i=document.createElement("i"); i.textContent = t.status==="done"?"✓":t.status==="missed"?"✕":t.status==="cf"?"→":"·";
-      r.append(i, document.createTextNode(t.text)); c.append(r); });
+      const tx=document.createElement("span"); tx.textContent = t.text;
+      r.append(document.createElement("i"), tx); c.append(r); });
     if (tasks.length>SHOW){ const m=document.createElement("div"); m.className="more"; m.textContent = `+${tasks.length-SHOW} more`; c.append(m); }
-    if (tasks.length){ const dots=document.createElement("div"); dots.className="dots";
-      tasks.slice(0,8).forEach(t=>{ const b=document.createElement("b"); b.className=t.status; dots.append(b); }); c.append(dots); }
+    const mark = dayMark(tally({tasks}), ds);
+    if (mark){ const dots=document.createElement("div"); dots.className="dots"; const b=document.createElement("b"); b.className=mark; dots.append(b); c.append(dots); }
     c.onclick = ()=>{ if (ds!==S.date) openDay(ds); };
     c.ondblclick = ()=>setView("day");
     g.append(c);
@@ -185,59 +186,85 @@ async function sendForward(){
 function tally(d){ const c={total:0,done:0,missed:0,cf:0,open:0}; (d.tasks||[]).forEach(t=>{ if(!t.text.trim()) return; c.total++; c[t.status]++; }); return c; }
 function renderAll(){ renderHeader(); renderWeek(); renderMonth(); renderCarryIn(); renderList(); renderEod(); renderCounts(); renderNotes(); }
 
+const weekday = ds => parse(ds).toLocaleDateString("en-GB",{weekday:"long"});
+function relDays(ds){
+  const n = Math.round((parse(ds) - parse(todayISO())) / 864e5);
+  return n===0 ? "" : n===1 ? "tomorrow" : n===-1 ? "yesterday" : n>1 ? `in ${n} days` : `${-n} days ago`;
+}
+const addPlaceholder = () => S.date===todayISO() ? "Add a task" : "Add to "+weekday(S.date);
 function renderHeader(){
-  const d = parse(S.date), m = S.view==="month";
-  $("dow").textContent = m ? "Month" : d.toLocaleDateString("en-GB",{weekday:"long"});
-  $("title").textContent = "";
-  $("title").append(m ? d.toLocaleDateString("en-GB",{month:"long"}) : d.toLocaleDateString("en-GB",{day:"numeric",month:"long"}));
-  const yr = document.createElement("span"); yr.className="yr"; yr.textContent = d.getFullYear(); $("title").append(yr);
-  $("todayTag").hidden = m || S.date!==todayISO();
-  $("vDay").setAttribute("aria-pressed", !m); $("vMonth").setAttribute("aria-pressed", m);
-  $("prev").setAttribute("aria-label", m?"Previous month":"Previous day"); $("next").setAttribute("aria-label", m?"Next month":"Next day");
-  $("pageLabel").textContent = m ? parse(S.date).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"short"}) : "To do";
+  const d = parse(S.date), m = S.view==="month", td = todayISO(), title = $("title");
+  title.textContent = "";
+  if (m){
+    title.append(d.toLocaleDateString("en-GB",{month:"long"}));
+    const yr = document.createElement("span"); yr.className="yr"; yr.textContent = d.getFullYear(); title.append(yr);
+  } else title.textContent = weekday(S.date);
+  const rel = relDays(S.date);
+  $("sub").textContent = d.toLocaleDateString("en-GB",{day:"numeric",month:"long"}) + (rel ? ", "+rel : "");
+  $("sub").parentNode.hidden = m;
+  $("today").hidden = !m && S.date===td;
+  $("vMonth").setAttribute("aria-pressed", m);
+  $("pageLabel").textContent = m ? d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}) : S.date===td ? "Today" : weekday(S.date);
   $("openDayBtn").hidden = !m;
   document.body.classList.toggle("mview", m);
   $("pick").value = S.date;
-  $("notesBtn").classList.toggle("on", S.paneOpen); $("notesBtn").setAttribute("aria-pressed", S.paneOpen);
+  $("notesBtn").setAttribute("aria-pressed", S.paneOpen);
+  const add = $("adder"); if (add) add.placeholder = addPlaceholder();
+  renderSide();
 }
+/* The dot under a date shows how the day went: missed (red), past (grey), today or ahead (blue). */
+function dayMark(c, ds){ return !c || !c.total ? "" : c.missed ? "bad" : ds < todayISO() ? "has" : "good"; }
 function renderWeek(){
-  const w = $("week"); w.textContent = ""; w.hidden = S.view==="month"; const lo = weekStart(S.date), td = todayISO();
+  const w = $("week"); w.textContent = ""; const lo = weekStart(S.date), td = todayISO();
   for (let i=0;i<7;i++){
-    const ds = addDays(lo,i), d = parse(ds), c = S.week[ds];
-    const b = document.createElement("button"); b.className = "wd"+(ds===S.date?" sel":"")+(ds===td?" today":"");
+    const ds = addDays(lo,i), d = parse(ds);
+    const b = document.createElement("button"); b.className = "wd"+(ds===S.date?" sel":"")+(ds===td?" today":"")+(ds<td?" past":"");
     b.setAttribute("aria-label", d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}));
-    const l = document.createElement("span"); l.className="l"; l.textContent = d.toLocaleDateString("en-GB",{weekday:"short"});
+    const l = document.createElement("span"); l.className="l"; l.textContent = d.toLocaleDateString("en-GB",{weekday:"narrow"});
     const n = document.createElement("span"); n.className="n"; n.textContent = d.getDate();
-    const k = document.createElement("span"); k.className="c"; k.textContent = c && c.total ? `${c.done}/${c.total}` : "";
+    const k = document.createElement("span"); k.className="d "+dayMark(ds===S.date && S.day ? tally(S.day) : S.week[ds], ds);
     b.append(l,n,k); b.onclick = ()=>{ if (ds!==S.date) openDay(ds); };
     w.append(b);
   }
 }
+/* the Day Line (one segment per task, in list order) and its summary */
 function renderCounts(){
-  const c = tally(S.day||emptyDay(S.date));
-  $("counts").textContent = c.total ? `${c.done} of ${c.total} done` : "";
+  const day = S.day||emptyDay(S.date), c = tally(day), td = todayISO(), dl = $("dl");
+  dl.textContent = "";
+  day.tasks.filter(t=>t.text.trim()).forEach(t=>{ const i = document.createElement("i"); i.className = t.status; dl.append(i); });
+  let text = "";
+  if (c.total && S.date > td && !c.done && !c.missed) text = `${c.total} planned`;
+  else if (c.total){
+    const more = [c.missed && `${c.missed} missed`, c.cf && `${c.cf} carried`].filter(Boolean);
+    text = `${c.done} of ${c.total} done` + (more.length ? `. ${more.join(", ")}.` : "");
+  }
+  $("counts").textContent = text;
+  const t = S.date===td ? c : S.week[td];
+  $("navCount").textContent = t && t.total ? `${t.done} of ${t.total}` : "";
 }
+/* yesterday's carry-forwards, waiting to be added to this day */
 function renderCarryIn(){
   const box = $("carryIn"); box.textContent = "";
   if (!S.carryIn.length) return;
-  const n = S.carryIn.reduce((a,g)=>a+g.tasks.length,0);
+  const n = S.carryIn.reduce((a,g)=>a+g.tasks.length,0), yday = addDays(S.date,-1);
+  const sh = document.createElement("div"); sh.className = "sh";
+  const lab = document.createElement("span"); lab.textContent = S.carryIn.every(g=>g.date===yday) ? "Carried from yesterday" : "Carried forward";
+  const btn = document.createElement("button"); btn.className = "btn quiet"; btn.textContent = n===1 ? "Add it" : n===2 ? "Add both" : "Add all"; btn.onclick = bringOver;
+  sh.append(lab, btn);
   const wrap = document.createElement("div"); wrap.className = "carry-in";
-  const hd = document.createElement("div"); hd.className="hd";
-  const lab = document.createElement("span"); lab.className="label"; lab.style.color="var(--pen)"; lab.textContent = `${n} carried forward (cf)`;
-  const btn = document.createElement("button"); btn.className="btn pen"; btn.textContent = "Bring onto this page"; btn.onclick = bringOver;
-  hd.append(lab,btn);
-  const ul = document.createElement("ul");
   S.carryIn.forEach(g=>g.tasks.forEach(t=>{
-    const li = document.createElement("li");
-    const s = document.createElement("span"); s.className="src"; s.textContent = fmtShort(g.date);
-    const tx = document.createElement("span"); tx.className="t"; tx.textContent = t.text;
-    li.append(s,tx); ul.append(li);
+    const row = document.createElement("div"); row.className = "row";
+    const st = document.createElement("span"); st.className = "st sugg";
+    const txt = document.createElement("div"); txt.className = "txt";
+    const tx = document.createElement("div"); tx.className = "t"; tx.textContent = t.text; txt.append(tx);
+    if (g.date!==yday){ const tags = document.createElement("div"); tags.className = "tags";
+      const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = "From "+weekday(g.date); tags.append(tag); txt.append(tags); }
+    row.append(st, txt); wrap.append(row);
   }));
-  wrap.append(hd,ul); box.append(wrap);
+  box.append(sh, wrap);
 }
 
 function autosize(ta){ ta.style.height = "auto"; ta.style.height = ta.scrollHeight+"px"; }
-function boxGlyph(st){ return st==="done"?"✓":st==="missed"?"✕":st==="cf"?"cf":""; }
 
 /* open tasks stay on top; ticked, not-done and cf tasks sink below.
    A task that was just marked lands right under the open ones; one just reopened goes to the end of the open ones. */
@@ -262,30 +289,35 @@ function renderList(focusId, caretEnd){
   const wrap = $("listWrap");
   if (S.mode==="loading") wrap.textContent = "";
   if (S.mode==="loading"){ const l=document.createElement("div"); l.className="loading"; l.textContent="Opening your page…"; wrap.append(l); return; }
+  if (!$("adder")) $("addWrap").append(addBar());
+  $("adder").placeholder = addPlaceholder();
   const before = {}; wrap.querySelectorAll(".row[data-id]").forEach(r=>before[r.dataset.id]=r.getBoundingClientRect().top);
   wrap.textContent = "";
   settleOrder();
   const ul = document.createElement("ul"); ul.className = "list";
   S.day.tasks.forEach((t,i)=>ul.append(taskRow(t,i)));
-  ul.append(adderRow());
   wrap.append(ul);
   if (!S.day.tasks.length){
-    const e = document.createElement("div"); e.className="empty"; e.textContent = "Nothing on this page yet. Type your first task above and press Enter for the next one.";
+    const e = document.createElement("div"); e.className="empty"; e.textContent = "Nothing here yet. Add your first task.";
     wrap.append(e);
   }
   ul.querySelectorAll("textarea.t").forEach(autosize);
   slideRows(ul, before);
   if (focusId){
-    const el = ul.querySelector(`[data-id="${focusId}"] textarea.t`) || (focusId==="__add" && ul.querySelector(".adder textarea"));
+    const el = focusId==="__add" ? $("adder") : ul.querySelector(`[data-id="${focusId}"] textarea.t`);
     if (el){ el.focus(); const p = caretEnd===false?0:el.value.length; el.setSelectionRange(p,p); }
   }
 }
+
+/* "Tue", or a date when it's more than a few days away */
+const nearDay = ds => Math.abs(parse(ds) - parse(S.date)) < 6*864e5 ? weekday(ds) : fmtShort(ds);
+function tag(text, cls){ const t = document.createElement("span"); t.className = "tag"+(cls?" "+cls:""); t.textContent = text; return t; }
 
 function taskRow(t,i){
   const li = document.createElement("li"); li.className = "row "+t.status; li.dataset.id = t.id;
   const box = document.createElement("button"); box.className="box";
   box.setAttribute("aria-label", t.status==="done" ? "Mark not finished" : "Mark done");
-  const sp = document.createElement("span"); sp.textContent = boxGlyph(t.status); box.append(sp);
+  box.append(document.createElement("span"));
   box.onclick = ()=>{ t.status = t.status==="open" ? "done" : "open"; if (t.status!=="cf") t.carried = null; changed(0); renderList(); };
 
   const tx = document.createElement("div"); tx.className="txt";
@@ -294,53 +326,51 @@ function taskRow(t,i){
   ta.oninput = ()=>{ t.text = ta.value.replace(/\n/g," "); if (ta.value!==t.text) ta.value=t.text; autosize(ta); changed(); };
   ta.onkeydown = e=>onTaskKey(e,t,i,ta);
   tx.append(ta);
-  if (t.from){ const f=document.createElement("div"); f.className="from"; f.textContent = "cf from "+fmtShort(t.from); tx.append(f); }
+  const tags = document.createElement("div"); tags.className = "tags";
   if (t.status==="missed"){
-    const w = document.createElement("label"); w.className="why";
-    const b = document.createElement("b"); b.textContent = "Not done";
-    const inp = document.createElement("input"); inp.id="r-"+t.id; inp.value=t.reason; inp.placeholder="why? (optional)";
-    inp.oninput = ()=>{ t.reason = inp.value; changed(); };
-    w.append(b,inp); tx.append(w);
+    const w = document.createElement("label"); w.className="tag miss why";
+    const b = document.createElement("b"); b.textContent = "Missed:"; b.style.fontWeight = "500";
+    const inp = document.createElement("input"); inp.id="r-"+t.id; inp.value=t.reason; inp.placeholder="why? (optional)"; inp.setAttribute("aria-label","Why it was missed");
+    const fit = ()=>{ inp.size = Math.max(6, (inp.value || inp.placeholder).length); };
+    inp.oninput = ()=>{ t.reason = inp.value; fit(); changed(); }; fit();
+    w.append(b,inp); tags.append(w);
   }
+  if (t.status==="cf") tags.append(t.carried ? tag("Carried to "+nearDay(t.carried), "sent") : tag("Carried", "cf"));
+  if (t.from) tags.append(tag("From "+nearDay(t.from)));
+  if (tags.childNodes.length) tx.append(tags);
 
   const acts = document.createElement("div"); acts.className="acts";
-  if (t.status==="cf"){ const p=document.createElement("span"); p.className="pill "+(t.carried?"sent":"cf"); p.textContent = t.carried ? "cf → "+fmtShort(t.carried).replace(/^\w+ /,"") : "cf"; acts.append(p); }
-  const nb = document.createElement("button"); nb.className="a note"+(hasNote(t.note)?" has":""); nb.innerHTML = ICON_NOTE;
+  const nb = document.createElement("button"); nb.className="a note"+(hasNote(t.note)?" has":""); nb.innerHTML = '<i class="ic ic-note-s"></i>';
   nb.setAttribute("aria-label", hasNote(t.note) ? "Open note for this task" : "Add a note to this task");
   nb.onclick = ()=>openNote(t.id);
-  const mb = document.createElement("button"); mb.className="a"; mb.innerHTML = ICON_MORE; mb.setAttribute("aria-label","More for this task"); mb.setAttribute("aria-haspopup","menu");
+  const mb = document.createElement("button"); mb.className="a"; mb.innerHTML = '<i class="ic ic-more"></i>'; mb.setAttribute("aria-label","More for this task"); mb.setAttribute("aria-haspopup","menu");
   mb.onclick = e=>{ e.stopPropagation(); openMenu(mb,t,i); };
   acts.append(nb,mb);
   li.append(box,tx,acts);
   return li;
 }
 
-function adderRow(){
-  const li = document.createElement("li"); li.className="row adder";
-  const box = document.createElement("div"); box.className="box"; const sp=document.createElement("span"); box.append(sp);
-  const tx = document.createElement("div"); tx.className="txt";
-  const ta = document.createElement("textarea"); ta.className="t"; ta.rows=1; ta.id="adder"; ta.placeholder = S.day.tasks.length ? "Add another…" : "What needs doing today?";
-  ta.setAttribute("aria-label","Add a task");
-  ta.oninput = ()=>{
-    if (ta.value.includes("\n")){ ta.value = ta.value.replace(/\n/g,""); }
-    autosize(ta);
+/* Add Bar: floats at the bottom on phone and iPad, sits at the top of the list on Mac */
+function addBar(){
+  const bar = document.createElement("div"); bar.className = "adder";
+  const ta = document.createElement("textarea"); ta.rows = 1; ta.id = "adder"; ta.setAttribute("aria-label","Add a task");
+  const add = (lines)=>{
+    lines.forEach(l=>S.day.tasks.push({id:uid(),text:l,status:"open",reason:"",note:"",from:null,carried:null}));
+    ta.value = ""; autosize(ta); changed(0); renderList("__add");
   };
-  ta.onkeydown = e=>{
-    if (e.key==="Enter" && !e.shiftKey && !e.isComposing){
-      e.preventDefault(); const v = ta.value.trim(); if (!v) return;
-      S.day.tasks.push({id:uid(),text:v,status:"open",reason:"",note:"",from:null,carried:null});
-      changed(0); renderList("__add");
-    }
-  };
+  const submit = ()=>{ const v = ta.value.trim(); if (v) add([v]); else ta.focus(); };
+  ta.oninput = ()=>{ if (ta.value.includes("\n")) ta.value = ta.value.replace(/\n/g,""); autosize(ta); };
+  ta.onkeydown = e=>{ if (e.key==="Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); submit(); } };
   ta.addEventListener("paste", e=>{
     const text = (e.clipboardData||window.clipboardData).getData("text");
     const lines = text.split(/\r?\n/).map(s=>s.replace(/^\s*(?:[-*•]|\[[ xX]?\]|\d+[.)])\s*/,"").trim()).filter(Boolean);
-    if (lines.length>1){ e.preventDefault();
-      lines.forEach(l=>S.day.tasks.push({id:uid(),text:l,status:"open",reason:"",note:"",from:null,carried:null}));
-      changed(0); renderList("__add"); }
+    if (lines.length>1){ e.preventDefault(); add(lines); }
   });
-  tx.append(ta); li.append(box,tx,document.createElement("div"));
-  return li;
+  const plus = document.createElement("button"); plus.className = "plus"; plus.setAttribute("aria-label","Add task"); plus.innerHTML = '<i class="ic ic-plus"></i>';
+  plus.addEventListener("mousedown", e=>e.preventDefault()); // keep the keyboard open
+  plus.onclick = submit;
+  bar.append(ta, plus);
+  return bar;
 }
 
 function onTaskKey(e,t,i,ta){
@@ -372,7 +402,7 @@ function renderEod(){
   const hd = document.createElement("div"); hd.className="hd";
   const lab = document.createElement("span"); lab.className="label"; lab.textContent = "End of day";
   const tl = document.createElement("div"); tl.className="tally";
-  [["done",c.done,"d"],["not done",c.missed,"m"],["cf",c.cf,"c"],["open",c.open,""]].forEach(([k,v,cls])=>{
+  [["done",c.done,"d"],["missed",c.missed,"m"],["carried",c.cf,"c"],["open",c.open,""]].forEach(([k,v,cls])=>{
     const s=document.createElement("span"); const vv=document.createElement("span"); vv.className="v "+cls; vv.textContent=v;
     const kk=document.createElement("span"); kk.className="k"; kk.textContent=" "+k; s.append(vv,kk); tl.append(s); });
   hd.append(lab,tl); box.append(hd);
@@ -380,22 +410,23 @@ function renderEod(){
   const cfs = S.day.tasks.filter(t=>t.status==="cf" && t.text.trim());
   if (cfs.length){
     const ul = document.createElement("ul"); ul.className="cflist";
-    cfs.forEach(t=>{ const li=document.createElement("li"); const s=document.createElement("span"); s.textContent=t.text + (t.carried?"  ✓ on "+fmtShort(t.carried):""); li.append(s); ul.append(li); });
+    cfs.forEach(t=>{ const li=document.createElement("li"); const st=document.createElement("i"); st.className="st cf";
+      const s=document.createElement("span"); s.textContent=t.text + (t.carried?" · on "+fmtShort(t.carried):""); li.append(st,s); ul.append(li); });
     box.append(ul);
   }
   const acts = document.createElement("div"); acts.className="eod-acts";
   if (c.open){
-    const b=document.createElement("button"); b.className="btn"; b.textContent = `Mark ${c.open} unfinished as cf`;
+    const b=document.createElement("button"); b.className="btn sec"; b.textContent = `Mark ${c.open} unfinished as carried`;
     b.onclick = ()=>{ S.day.tasks.forEach(t=>{ if (t.status==="open" && t.text.trim()) t.status="cf"; }); changed(0); renderList(); };
     acts.append(b);
   }
   const pend = cfs.filter(t=>!t.carried).length;
   if (pend){
-    const b=document.createElement("button"); b.className="btn pen"; b.textContent = `Carry ${pend} to ${fmtShort(addDays(S.date,1))}`;
+    const b=document.createElement("button"); b.className="btn primary"; b.textContent = `Carry ${pend} to ${weekday(addDays(S.date,1))}`;
     b.onclick = sendForward; acts.append(b);
   }
   if (acts.childNodes.length) box.append(acts);
-  if (!pend && !c.open && cfs.length){ const h=document.createElement("div"); h.className="hint"; h.textContent="All cf items are on the next page."; box.append(h); }
+  if (!pend && !c.open && cfs.length){ const h=document.createElement("div"); h.className="hint"; h.textContent="All carried tasks are on the next day."; box.append(h); }
 }
 
 /* ---------- notes ---------- */
@@ -469,7 +500,7 @@ function setSheet(full){
 }
 let drag = null;
 function sheetDown(e){
-  if (window.innerWidth > 860 || drag) return;
+  if (!SHEET.matches || drag) return;
   if (e.target.closest("button,select,input,a")) return;
   drag = {y:e.clientY, h:notesEl.getBoundingClientRect().height, t:performance.now(), moved:false, el:e.currentTarget};
   notesEl.classList.add("dragging");
@@ -505,9 +536,10 @@ $("grab").addEventListener("keydown", e=>{ if (e.key==="Enter" || e.key===" "){ 
 function caretEnd(){ try { const r=document.createRange(); r.selectNodeContents(ed); r.collapse(false); const s=getSelection(); s.removeAllRanges(); s.addRange(r); } catch(e){} }
 function markBlank(){ ed.classList.toggle("blank", !ed.textContent.trim() && !ed.querySelector("li")); }
 function renderNotes(){
-  const pane = $("notes"), main = $("main");
-  pane.hidden = !S.paneOpen || !S.day || S.view==="month"; $("scrim").hidden = pane.hidden;
-  main.classList.toggle("split", !pane.hidden);
+  const pane = $("notes");
+  // on a Mac the Notes panel stays open beside the day
+  pane.hidden = !(S.paneOpen || DESK.matches) || !S.day || S.view==="month"; $("scrim").hidden = pane.hidden || !SHEET.matches;
+  document.body.classList.toggle("split", !pane.hidden && !SHEET.matches);
   if (pane.hidden) return;
   ["task","day","week"].forEach(s=>$("ns-"+s).setAttribute("aria-pressed", S.noteScope===s));
   const sub = $("nsub"); sub.textContent = "";
@@ -643,9 +675,9 @@ function openMenu(anchor,t,i){
     b.onclick=()=>{ closeMenu(); fn(); }; menu.append(b); };
   const sep = ()=>{ const d=document.createElement("div"); d.className="sep"; menu.append(d); };
   const setSt = st=>()=>{ t.status = st; if (st!=="cf") t.carried=null; changed(0); renderList(); if (st==="missed") setTimeout(()=>{ const r=$("r-"+t.id); if(r) r.focus(); },20); };
-  if (t.status!=="done") item("Done ✓", setSt("done"), "", "⌘↵");
-  if (t.status!=="missed") item("Not done ✕", setSt("missed"));
-  if (t.status!=="cf") item("Carry forward (cf)", setSt("cf"));
+  if (t.status!=="done") item("Mark done", setSt("done"), "", "⌘↵");
+  if (t.status!=="missed") item("Missed", setSt("missed"));
+  if (t.status!=="cf") item("Carry forward", setSt("cf"));
   if (t.status!=="open") item("Back to open", setSt("open"));
   sep();
   if (S.view!=="month") item(hasNote(t.note)?"Open note":"Add a note", ()=>openNote(t.id));
@@ -662,22 +694,30 @@ function openMenu(anchor,t,i){
 }
 function closeMenu(){ menu.hidden = true; }
 document.addEventListener("click", e=>{ if (!menu.hidden && !menu.contains(e.target)) closeMenu(); });
-document.addEventListener("keydown", e=>{ if (e.key==="Escape"){ if(!menu.hidden) closeMenu(); else if (S.paneOpen && window.innerWidth<=860) setPane(false); } });
+document.addEventListener("keydown", e=>{ if (e.key==="Escape"){ if(!menu.hidden) closeMenu(); else if (S.paneOpen && SHEET.matches) setPane(false); } });
 window.addEventListener("resize", closeMenu); window.addEventListener("scroll", closeMenu, true);
 
 /* ---------- nav ---------- */
 $("prev").onclick = ()=> S.view==="month" ? shiftMonth(-1) : openDay(addDays(S.target,-1));
 $("next").onclick = ()=> S.view==="month" ? shiftMonth(1) : openDay(addDays(S.target,1));
-$("vDay").onclick = ()=>setView("day");
-$("vMonth").onclick = ()=>setView("month");
+$("vMonth").onclick = ()=>setView(S.view==="month" ? "day" : "month");
 $("openDayBtn").onclick = ()=>{ setView("day"); window.scrollTo({top:0}); };
 $("today").onclick = ()=>openDay(todayISO());
 $("pick").onchange = e=>{ if (e.target.value) openDay(e.target.value); };
 
-const SYNC_TEXT = {synced:"Synced", syncing:"Syncing…", offline:"Offline", error:"Couldn't sync"};
+/* layouts (match styles.css): phone and iPad portrait use sheets; Mac has the sidebar */
+const SHEET = matchMedia("(max-width:767px), (max-width:1279px) and (orientation:portrait)");
+const DESK = matchMedia("(min-width:1280px)");
+[SHEET, DESK].forEach(q=>q.addEventListener("change", ()=>{ if (S.day) renderAll(); }));
+
+/* Sync Status: quiet text under the list (and in the Mac sidebar); only an error asks for attention */
+const SYNC_TEXT = {synced:"Synced", syncing:"Syncing…", offline:"Offline. Changes are saved on this device.", error:"Couldn't sync. Tap to try again."};
 function setFoot(msg){
-  $("foot").textContent = msg || (S.user ? SYNC_TEXT[S.sync] || "Syncing…" : "Saved on this device only.");
+  const state = msg ? "error" : S.user ? S.sync || "syncing" : "local";
+  const text = msg || (S.user ? SYNC_TEXT[state] : "Saved on this device only.");
+  ["foot","sideSync"].forEach(id=>{ const el = $(id); el.textContent = text; el.dataset.state = state; });
 }
+["foot","sideSync"].forEach(id=>$(id).addEventListener("click", ()=>{ if (S.user && S.sync==="error") sync.run(); }));
 
 /* ---------- sync (see src/sync.js) ---------- */
 S.sync = null;
@@ -717,8 +757,9 @@ function redrawKeepingFocus(){
 
 /* ---------- account ---------- */
 S.user = null;
-function renderAccount(){
-  const a = $("acct"); a.textContent = "";
+function renderAccount(){ ["acct","sideAcct"].forEach(id=>accountInto($(id))); }
+function accountInto(a){
+  a.textContent = "";
   const button = (label, run)=>{ const b = document.createElement("button"); b.textContent = label;
     b.onclick = async ()=>{ b.disabled = true; try { await run(); } catch(e){ setFoot(navigator.onLine ? "Something went wrong ("+errMsg(e)+"). Please try again." : "You're offline. Try again when you're back online."); } b.disabled = false; };
     return b; };
@@ -736,9 +777,74 @@ function renderAccount(){
 function offerUpdate(apply){
   const t = $("toast"); t.textContent = "";
   const msg = document.createElement("span"); msg.textContent = "A new version of MyDay is ready";
-  const b = document.createElement("button"); b.className = "btn pen"; b.textContent = "Refresh";
+  const b = document.createElement("button"); b.className = "btn"; b.textContent = "Refresh";
   b.onclick = async ()=>{ b.disabled = true; await Promise.all([flush(), flushWeek()]); apply(); };
   t.append(msg, b); t.hidden = false;
+}
+
+/* ---------- Mac sidebar ---------- */
+S.miniKey = null;
+function renderSide(){
+  if (!DESK.matches) return;
+  const m = S.view==="month", td = todayISO();
+  $("navToday").setAttribute("aria-current", !m && S.date===td);
+  $("navMonth").setAttribute("aria-current", m);
+  $("navWeek").setAttribute("aria-current", !m && S.noteScope==="week");
+  if (!S.miniKey || S.miniFor!==S.date){ S.miniKey = monthOf(S.date); S.miniFor = S.date; }
+  const box = $("mini"); box.textContent = "";
+  const first = S.miniKey+"-01", hd = document.createElement("div"); hd.className = "hd";
+  const name = document.createElement("span"); name.textContent = parse(first).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  const arrows = document.createElement("div");
+  [["left","Previous month",-1],["right","Next month",1]].forEach(([ic,label,n])=>{
+    const b = document.createElement("button"); b.setAttribute("aria-label", label); b.innerHTML = `<i class="ic ic-${ic}"></i>`;
+    b.onclick = ()=>{ const d = parse(first); d.setMonth(d.getMonth()+n); S.miniKey = iso(d).slice(0,7); renderSide(); };
+    arrows.append(b);
+  });
+  hd.append(name, arrows);
+  const g = document.createElement("div"); g.className = "g";
+  ["M","T","W","T","F","S","S"].forEach(l=>{ const s = document.createElement("span"); s.textContent = l; g.append(s); });
+  const {lo,hi} = monthRange(S.miniKey);
+  for (let ds=lo; ds<hi; ds=addDays(ds,1)){
+    const b = document.createElement("button"); b.textContent = parse(ds).getDate();
+    b.className = (monthOf(ds)!==S.miniKey?"out ":"")+(ds===td?"today ":"")+(ds===S.date?"sel":"");
+    b.setAttribute("aria-label", parse(ds).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"}));
+    b.onclick = ()=>openDay(ds);
+    g.append(b);
+  }
+  box.append(hd, g);
+}
+$("navToday").onclick = ()=>{ if (S.view==="month") setView("day"); openDay(todayISO()); };
+$("navMonth").onclick = ()=>setView("month");
+$("navWeek").onclick = ()=>{ if (S.view==="month") setView("day"); setScope("week"); setPane(true); };
+
+/* keep the floating Add Bar and toasts above the on-screen keyboard */
+if (window.visualViewport){
+  const vv = window.visualViewport;
+  const kb = ()=>document.documentElement.style.setProperty("--kb", Math.max(0, window.innerHeight - vv.height - vv.offsetTop)+"px");
+  vv.addEventListener("resize", kb); vv.addEventListener("scroll", kb);
+}
+
+/* ---------- welcome: shown once, on a device that has nothing in it yet ---------- */
+async function maybeWelcome(){
+  if (lsGet("dp:welcomed")) return;
+  lsSet("dp:welcomed", new Date().toISOString());
+  if ((await readDays("1970-01-01","9999-12-31")).length) return; // someone who already uses MyDay here
+  const w = $("welcome");
+  w.innerHTML = `<div class="in">
+    <div class="brand"><span class="st done"></span>MyDay</div>
+    <h2>Your day, one list.</h2>
+    <p class="lead">A simple to-do list with notes beside it. Nothing to set up: start typing.</p>
+    <div class="card"><div class="demo"><span class="st"></span><span class="st done"></span><span class="st missed"></span><span class="st cf"></span></div>
+      <h3>Tap the circle when it's done</h3><p>Add what needs doing today. Each task gets a circle: tap it to finish, or use ⋯ for missed and carry forward.</p></div>
+    <div class="card"><div class="demo"><div class="dl"><i class="done"></i><i class="done"></i><i class="missed"></i><i class="cf"></i><i></i></div></div>
+      <h3>Watch the day take shape</h3><p>The Day Line under the date fills in as you go. Whatever's left moves to tomorrow in one tap.</p></div>
+    <div class="card"><div class="demo"><div class="sync" data-state="synced">Synced</div></div>
+      <h3>On all your devices</h3><p>Works offline on this device. Create an account to keep your phone, iPad and Mac in step.</p></div>
+    <div class="acts-w"><button class="btn primary" id="wStart">Start</button><a class="btn quiet" href="/signin">I already have an account</a></div>
+  </div>`;
+  w.hidden = false;
+  $("wStart").onclick = ()=>{ w.hidden = true; w.textContent = ""; focusAdder(); };
+  $("wStart").focus();
 }
 
 /* ---------- boot ---------- */
@@ -761,6 +867,7 @@ async function boot(){
   let lastToday = todayISO();
   setInterval(()=>{ const t = todayISO(); if (t!==lastToday){ const wasToday = S.date===lastToday; lastToday=t; if (wasToday && !isEditing()) openDay(t); else renderWeek(); } }, 60000);
   openDay(S.date);
+  maybeWelcome().catch(()=>{});
 }
 boot();
 })();

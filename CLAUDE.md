@@ -70,8 +70,23 @@ conflict screens.
 7. **The new look.** Apply the Clear day design below to Day, Month and Notes, on phone,
    iPad and Mac. Behaviour stays exactly as it is today. Switch the manifest/theme colour
    to `--bg`. Build the sign-in button and sign-out in the same style.
-   - Also a **welcome page**, built from the Figma components and tokens (added by Amin,
-     15 Oct 2026). Amin may adjust it afterwards.
+   - Also a **welcome page** (Figma User Flows "E2 Welcome": three short cards and a Start
+     button, shown once on first open), built from the Figma components and tokens (added
+     by Amin, 15 Oct 2026). Amin may adjust it afterwards.
+   - Decided 15 Oct 2026: **restyle only** — keep today's behaviour (⋯ task menu, "Carry
+     to tomorrow", etc.), even where Figma shows press-and-hold sheets, move to another
+     day, Undo or an end-of-day sheet. **No gear/Settings** for now (Settings comes later);
+     sign in / sign out stay as quiet text under the list (and in the Mac sidebar). Goes
+     live **all at once** when every part is done; show Amin screenshots along the way.
+   - Built (15 Oct 2026): `src/styles.css` (tokens, components, layouts), Instrument Sans
+     self-hosted in `public/fonts/` (no Google requests), icons from Figma in
+     `public/icons/ui/` drawn as CSS masks so they follow light/dark. Day view uses the week
+     strip, a "Today" button and tapping the date (date picker) instead of prev/next
+     arrows; Month keeps prev/next. On Mac, Notes is always open. The welcome page shows
+     once, only on a device with no tasks yet.
+   - Figma: read pages by node id (listing pages only shows an empty "Cover"):
+     Components 1:4, User Flows 1:6, Wireframes Phone 1:7, iPad 1:8, Desktop 1:9,
+     Hi-fi 1:11, App icon 37:2.
 
 Done after step 7.
 
