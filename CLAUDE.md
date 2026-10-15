@@ -67,7 +67,7 @@ conflict screens.
    whatever is already on that device. On a device's first sync, a day that exists both
    on the device and online is combined (every task from both, both notes joined), not
    replaced (Amin's choice). Built in `src/sync.js`; also syncs ~2 s after each save.
-7. **The new look.** Apply the Clear day design below to Day, Month and Notes, on phone,
+7. ✅ **The new look.** Apply the Clear day design below to Day, Month and Notes, on phone,
    iPad and Mac. Behaviour stays exactly as it is today. Switch the manifest/theme colour
    to `--bg`. Build the sign-in button and sign-out in the same style.
    - Also a **welcome page** (Figma User Flows "E2 Welcome": three short cards and a Start
