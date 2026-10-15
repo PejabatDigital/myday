@@ -60,7 +60,7 @@ conflict screens.
    The app still works signed-out on one device.
    - Plain privacy page at `/privacy`: what's stored (email, scrambled password, tasks),
      where, Resend only for account emails, no tracking. Contact hello@kasahkod.cc.
-6. **Sync.** Connect device storage to online storage for signed-in users: send changes
+6. ✅ **Sync.** Connect device storage to online storage for signed-in users: send changes
    up, pull changes down, on open, on return to the app, on reconnect, and every ~30 s
    while open. Rule: the latest edit wins. Show the simple footer status (Synced /
    Syncing / Offline / Couldn't sync). When someone signs in for the first time, upload
@@ -70,6 +70,8 @@ conflict screens.
 7. **The new look.** Apply the Clear day design below to Day, Month and Notes, on phone,
    iPad and Mac. Behaviour stays exactly as it is today. Switch the manifest/theme colour
    to `--bg`. Build the sign-in button and sign-out in the same style.
+   - Also a **welcome page**, built from the Figma components and tokens (added by Amin,
+     15 Oct 2026). Amin may adjust it afterwards.
 
 Done after step 7.
 
