@@ -51,7 +51,7 @@ conflict screens.
 2. ✅ Device storage and offline.
 3. ✅ Installable app and final icon.
 4. ✅ Online storage (Worker API + D1 `myday-production`), live at myday.kasahkod.cc.
-5. **Email and password sign-in.** Better Auth's email and password, on its own page
+5. ✅ **Email and password sign-in.** Better Auth's email and password, on its own page
    `/signin` (sign in, create account, forgot password, choose a new password). Anyone can
    sign up; new accounts must confirm their email (link by email) before they can sign in.
    "Forgot password" emails a reset link. Emails go through Resend from
