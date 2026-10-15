@@ -21,6 +21,9 @@
   input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
   button{font:inherit;font-weight:500;height:44px;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent);cursor:pointer;margin-top:4px}
   button:disabled{opacity:.5;cursor:default}
+  .alt{display:grid;gap:8px;margin:28px 0 8px}
+  .alt p{margin:0;text-align:center;color:var(--muted);font-size:15px}
+  button.secondary{background:var(--subtle);color:var(--text);margin:0}
   .links{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:15px}
   .links a{padding:10px 0}
   #msg{min-height:24px}
@@ -46,9 +49,12 @@
   <p id="msg" role="status" aria-live="polite"></p>
 
   <div class="links">
-    <a href="#" data-mode="signup">Create an account</a>
     <a href="#" data-mode="forgot">Forgot password?</a>
-    <a href="#" data-mode="signin">I already have an account</a>
+    <a href="#" data-mode="signin">Back to sign in</a>
+  </div>
+  <div class="alt" id="alt">
+    <p id="altText"></p>
+    <button class="secondary" id="altButton" type="button"></button>
   </div>
   <p class="muted" style="margin-top:32px"><a href="/privacy">Privacy</a></p>
 </main>
@@ -60,8 +66,8 @@
   const resetToken = params.get("token");
 
   const MODES = {
-    signin: {title:"Sign in", intro:"Sign in to keep your tasks on your phone, iPad and Mac.", button:"Sign in", email:true, password:"current-password", links:["signup","forgot"]},
-    signup: {title:"Create an account", intro:"Use your email and a password of at least 8 characters. We'll send you a link to confirm your email.", button:"Create account", email:true, password:"new-password", links:["signin"]},
+    signin: {title:"Sign in", intro:"Sign in to keep your tasks on your phone, iPad and Mac.", button:"Sign in", email:true, password:"current-password", links:["forgot"], alt:["New to MyDay?", "Create an account", "signup"]},
+    signup: {title:"Create an account", intro:"Use your email and a password of at least 8 characters. We'll send you a link to confirm your email.", button:"Create account", email:true, password:"new-password", links:[], alt:["Already have an account?", "Sign in", "signin"]},
     forgot: {title:"Forgot password", intro:"Enter your email and we'll send you a link to choose a new password.", button:"Send reset link", email:true, password:null, links:["signin"]},
     reset:  {title:"Choose a new password", intro:"At least 8 characters.", button:"Save new password", email:false, password:"new-password", links:[]},
   };
@@ -77,6 +83,8 @@
     $("passwordField").hidden = !c.password;
     if (c.password) $("password").autocomplete = c.password;
     document.querySelectorAll("[data-mode]").forEach(a=>{ a.hidden = !c.links.includes(a.dataset.mode); });
+    $("alt").hidden = !c.alt;
+    if (c.alt){ $("altText").textContent = c.alt[0]; $("altButton").textContent = c.alt[1]; $("altButton").dataset.to = c.alt[2]; }
     say(message || "", isError);
   }
   function say(text, isError){ $("msg").textContent = text; $("msg").className = isError ? "error" : ""; }
@@ -135,7 +143,9 @@
     $("submit").disabled = false;
   });
 
-  document.querySelectorAll("[data-mode]").forEach(a=>a.addEventListener("click", ev=>{ ev.preventDefault(); show(a.dataset.mode); $(MODES[a.dataset.mode].email ? "email" : "password").focus(); }));
+  function go(m){ show(m); $(MODES[m].email ? "email" : "password").focus(); }
+  document.querySelectorAll("[data-mode]").forEach(a=>a.addEventListener("click", ev=>{ ev.preventDefault(); go(a.dataset.mode); }));
+  $("altButton").addEventListener("click", ()=>go($("altButton").dataset.to));
 
   // arriving from a link in an email
   const m = params.get("mode"), error = params.get("error");

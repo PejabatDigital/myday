@@ -700,7 +700,8 @@ function renderAccount(){
     const who = document.createElement("span"); who.textContent = "Signed in as "+(S.user.email || S.user.name);
     a.append(who, button("Sign out", async ()=>{ await signOut(); S.user = null; renderAccount(); }));
   } else {
-    a.append(button("Sign in", async ()=>{ await Promise.all([flush(), flushWeek()]); location.href = "/signin"; }));
+    const go = path => async ()=>{ await Promise.all([flush(), flushWeek()]); location.href = path; };
+    a.append(button("Sign in", go("/signin")), button("Create account", go("/signin?mode=signup")));
   }
   const p = document.createElement("a"); p.href = "/privacy"; p.textContent = "Privacy"; a.append(p);
 }
