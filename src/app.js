@@ -1,6 +1,7 @@
 import { initStore, readDay, writeDay, readDays, readWeek, writeWeek, flushPending } from "./store/index.js";
 import { registerSW } from "./pwa.js";
-import { currentUser, signOut } from "./account.js";
+import { currentUser, signOut, remembered } from "./account.js";
+import * as onb from "./onboarding.js";
 import { emptyDay, normalize, esc, RICH } from "./day.js";
 import { createSync } from "./sync.js";
 
@@ -298,7 +299,14 @@ function renderList(focusId, caretEnd){
   S.day.tasks.forEach((t,i)=>ul.append(taskRow(t,i)));
   wrap.append(ul);
   if (!S.day.tasks.length){
-    const e = document.createElement("div"); e.className="empty"; e.textContent = "Nothing here yet. Add your first task.";
+    const e = document.createElement("div"); e.className = "empty";
+    if (S.view==="day" && !S.carryIn.length){ // Today (empty)
+      e.classList.add("big");
+      const st = document.createElement("span"); st.className = "st sugg";
+      const h = document.createElement("h3"); h.textContent = "Nothing planned yet";
+      const p = document.createElement("p"); p.textContent = `Add your first task ${DESK.matches ? "above" : "below"}. It's saved on this device straight away.`;
+      e.append(st, h, p);
+    } else e.textContent = "Nothing planned yet.";
     wrap.append(e);
   }
   ul.querySelectorAll("textarea.t").forEach(autosize);
@@ -356,10 +364,11 @@ function addBar(){
   const ta = document.createElement("textarea"); ta.rows = 1; ta.id = "adder"; ta.setAttribute("aria-label","Add a task");
   const add = (lines)=>{
     lines.forEach(l=>S.day.tasks.push({id:uid(),text:l,status:"open",reason:"",note:"",from:null,carried:null}));
-    ta.value = ""; autosize(ta); changed(0); renderList("__add");
+    ta.value = ""; autosize(ta); typing(); changed(0); renderList("__add");
   };
   const submit = ()=>{ const v = ta.value.trim(); if (v) add([v]); else ta.focus(); };
-  ta.oninput = ()=>{ if (ta.value.includes("\n")) ta.value = ta.value.replace(/\n/g,""); autosize(ta); };
+  const typing = ()=>{ const on = !!ta.value.trim(); bar.classList.toggle("typing", on); plus.innerHTML = `<i class="ic ic-${on ? "send" : "plus"}"></i>`; };
+  ta.oninput = ()=>{ if (ta.value.includes("\n")) ta.value = ta.value.replace(/\n/g,""); autosize(ta); typing(); };
   ta.onkeydown = e=>{ if (e.key==="Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); submit(); } };
   ta.addEventListener("paste", e=>{
     const text = (e.clipboardData||window.clipboardData).getData("text");
@@ -765,7 +774,8 @@ function accountInto(a){
     return b; };
   if (S.user){
     const who = document.createElement("span"); who.textContent = "Signed in as "+(S.user.email || S.user.name);
-    a.append(who, button("Sign out", async ()=>{ await Promise.all([flush(), flushWeek()]); await sync.run(); await signOut(); sync.stop(); S.user = null; renderAccount(); setFoot(); }));
+    a.append(who, button("Sign out", async ()=>{ await Promise.all([flush(), flushWeek()]); await sync.run(); await signOut(); sync.stop(); S.user = null; renderAccount(); setFoot();
+      onb.signedOut(onb.close); }));
   } else {
     const go = path => async ()=>{ await Promise.all([flush(), flushWeek()]); location.href = path; };
     a.append(button("Sign in", go("/signin")), button("Create account", go("/signin?mode=signup")));
@@ -824,29 +834,6 @@ if (window.visualViewport){
   vv.addEventListener("resize", kb); vv.addEventListener("scroll", kb);
 }
 
-/* ---------- welcome: shown once, on a device that has nothing in it yet ---------- */
-async function maybeWelcome(){
-  if (lsGet("dp:welcomed")) return;
-  lsSet("dp:welcomed", new Date().toISOString());
-  if ((await readDays("1970-01-01","9999-12-31")).length) return; // someone who already uses MyDay here
-  const w = $("welcome");
-  w.innerHTML = `<div class="in">
-    <div class="brand"><span class="st done"></span>MyDay</div>
-    <h2>Your day, one list.</h2>
-    <p class="lead">A simple to-do list with notes beside it. Nothing to set up: start typing.</p>
-    <div class="card"><div class="demo"><span class="st"></span><span class="st done"></span><span class="st missed"></span><span class="st cf"></span></div>
-      <h3>Tap the circle when it's done</h3><p>Add what needs doing today. Each task gets a circle: tap it to finish, or use ⋯ for missed and carry forward.</p></div>
-    <div class="card"><div class="demo"><div class="dl"><i class="done"></i><i class="done"></i><i class="missed"></i><i class="cf"></i><i></i></div></div>
-      <h3>Watch the day take shape</h3><p>The Day Line under the date fills in as you go. Whatever's left moves to tomorrow in one tap.</p></div>
-    <div class="card"><div class="demo"><div class="sync" data-state="synced">Synced</div></div>
-      <h3>On all your devices</h3><p>Works offline on this device. Create an account to keep your phone, iPad and Mac in step.</p></div>
-    <div class="acts-w"><button class="btn primary" id="wStart">Start</button><a class="btn quiet" href="/signin">I already have an account</a></div>
-  </div>`;
-  w.hidden = false;
-  $("wStart").onclick = ()=>{ w.hidden = true; w.textContent = ""; focusAdder(); };
-  $("wStart").focus();
-}
-
 /* ---------- boot ---------- */
 async function boot(){
   registerSW(offerUpdate);
@@ -862,12 +849,30 @@ async function boot(){
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
   S.mode = "local";
   setFoot();
-  currentUser().then(u=>{ S.user = u; renderAccount(); setFoot(); if (u) sync.start(); });
+  // arriving from the sign-in page: "new" after confirming a new account, "signin" otherwise
+  const from = new URLSearchParams(location.search).get("from");
+  if (from) history.replaceState(null, "", "/");
+  // once: a device already in use without an account keeps going straight to its tasks
+  if (!lsGet("dp:onboard")){
+    lsSet("dp:onboard", "1");
+    if (!remembered() && (await readDays("1970-01-01","9999-12-31").catch(()=>[])).length) onb.chooseNoAccount();
+  }
+  const welcomeIfNeeded = ()=>{ if (!S.user && !onb.choseNoAccount()) onb.welcome(()=>onb.firstRun(onb.close)); };
+  S.user = remembered();
+  if (!from) welcomeIfNeeded(); // straight away, before the network answers
+  currentUser().then(u=>{
+    S.user = u; renderAccount(); setFoot();
+    if (u){
+      sync.start();
+      if (onb.isShowing("welcome")) onb.close();
+      if (from==="new") onb.firstRun(onb.close);
+      else if (from==="signin" && onb.needsTip()) onb.tip(onb.close);
+    } else welcomeIfNeeded();
+  });
   // roll to a new day if the page stays open past midnight
   let lastToday = todayISO();
   setInterval(()=>{ const t = todayISO(); if (t!==lastToday){ const wasToday = S.date===lastToday; lastToday=t; if (wasToday && !isEditing()) openDay(t); else renderWeek(); } }, 60000);
   openDay(S.date);
-  maybeWelcome().catch(()=>{});
 }
 boot();
 })();

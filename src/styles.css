@@ -47,7 +47,8 @@ a{color:var(--accent)}
 .ic-calendar{--i:url(/icons/ui/calendar.svg)} .ic-note{--i:url(/icons/ui/note.svg)} .ic-note-s{--i:url(/icons/ui/note-small.svg)}
 .ic-left{--i:url(/icons/ui/left.svg)} .ic-right{--i:url(/icons/ui/right.svg)} .ic-plus{--i:url(/icons/ui/plus.svg)}
 .ic-sun{--i:url(/icons/ui/sun.svg)} .ic-list{--i:url(/icons/ui/list.svg)} .ic-checklist{--i:url(/icons/ui/checklist.svg)}
-.ic-link{--i:url(/icons/ui/link.svg)}
+.ic-link{--i:url(/icons/ui/link.svg)} .ic-send{--i:url(/icons/ui/send.svg)}
+.ic-share{--i:url(/icons/ui/share.svg)} .ic-add-square{--i:url(/icons/ui/add-square.svg)} .ic-tick{--i:url(/icons/ui/tick.svg)}
 .ic-more{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='4.5' cy='10' r='1.5'/%3E%3Ccircle cx='10' cy='10' r='1.5'/%3E%3Ccircle cx='15.5' cy='10' r='1.5'/%3E%3C/svg%3E")}
 
 /* Button: 40px, fully rounded. One primary per screen. */
@@ -176,6 +177,9 @@ textarea.t::placeholder{color:var(--text-subtle)}
 .adder textarea::placeholder{color:var(--text-subtle)}
 .adder .plus{width:40px;height:40px;border-radius:20px;background:var(--subtle);color:var(--text-muted);display:flex;align-items:center;justify-content:center;flex:none}
 .adder .plus:hover{color:var(--text)}
+/* Add Bar, typing: blue ring and a blue send button */
+.adder.typing{box-shadow:var(--shadow),inset 0 0 0 1.5px var(--accent)}
+.adder.typing .plus{background:var(--accent);color:var(--on-accent)}
 
 /* end of day */
 .eod{margin:24px 0 0;padding:16px 20px 20px;background:var(--surface);border-radius:16px;display:flex;flex-direction:column;gap:12px}
@@ -273,19 +277,66 @@ textarea.t::placeholder{color:var(--text-subtle)}
 .toast span{flex:1;min-width:0}
 .toast .btn{height:36px;padding:0 14px;color:var(--accent-soft);background:none}
 
-/* ---------- welcome (first open) ---------- */
-.welcome{position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 40px) 20px calc(env(safe-area-inset-bottom,0px) + 24px)}
-.welcome .in{max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:12px;min-height:100%}
-.welcome .brand{margin-bottom:12px}
-.welcome h2{margin:0;font:600 34px/40px var(--font);letter-spacing:-.02em}
-.welcome .lead{margin:0 0 12px;color:var(--text-muted)}
-.welcome .card{background:var(--surface);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px}
-.welcome .card h3{margin:0;font:600 17px/24px var(--font);letter-spacing:-.005em}
-.welcome .card p{margin:-8px 0 0;color:var(--text-muted)}
-.welcome .demo{display:flex;align-items:center;gap:10px}
-.welcome .demo .dl{flex:1}
-.welcome .acts-w{margin-top:auto;padding-top:20px;display:flex;flex-direction:column;gap:4px}
-.welcome .acts-w .btn{width:100%;text-decoration:none}
+/* ---------- onboarding (Figma "Onboarding" 49:2): Welcome, Intro 1–3, tip, Signed out ---------- */
+html.onb-open,html.onb-open body{overflow:hidden}
+.onb{position:fixed;inset:0;z-index:60;overflow-y:auto;background:var(--bg);color:var(--text)}
+.onb .in{max-width:420px;min-height:100%;margin:0 auto;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 16px) 20px calc(env(safe-area-inset-bottom,0px) + 32px)}
+.onb h2{margin:0;font:600 34px/40px var(--font);letter-spacing:-.02em}
+.onb .grow{flex:1 1 0;min-height:24px}
+.onb .btn.big{height:48px}
+.appicon{display:block;width:88px;height:88px;border-radius:20px}
+/* navy: Welcome and Signed out — the brand colour in light and dark */
+.onb.navy{background:#13204A;color:#FFFFFF}
+.onb.navy .in{padding-inline:28px}
+.onb.navy .top{display:flex;flex-direction:column;align-items:center;gap:24px;text-align:center;padding-top:clamp(56px,20vh,190px)}
+.onb.navy .appicon{box-shadow:0 0 0 1px rgba(255,255,255,.12),0 12px 16px rgba(0,0,0,.25)}
+.onb.navy h2{font-size:min(36px,9vw);line-height:42px;white-space:nowrap}
+.onb.navy .top p{margin:-12px 0 0;max-width:300px;color:rgba(255,255,255,.7)}
+.motif{display:flex;gap:10px;justify-content:center;margin-top:48px}
+.motif i{width:26px;height:6px;border-radius:3px;background:rgba(255,255,255,.16)}
+.motif i.b{background:rgba(46,91,255,.45)}
+.onb .msg{align-self:center;margin:24px 0 0;padding:12px 16px;border-radius:12px;background:rgba(255,255,255,.1);font:400 13px/18px var(--font);text-align:center;max-width:300px}
+.onb.navy .oacts{margin-top:auto;padding-top:40px;padding-bottom:24px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.onb .btn.white{width:100%;height:52px;background:#FFFFFF;color:#13204A}
+.onb .btn.ghost{color:rgba(255,255,255,.85)}
+.onb .btn.ghost:hover{background:rgba(255,255,255,.08)}
+.onb .fine{margin:0;max-width:300px;text-align:center;font:400 12px/16px var(--font);color:rgba(255,255,255,.5)}
+.onb .fine a{color:inherit}
+/* light: Intro 1–3 and the tip */
+.onb .skip{display:flex;justify-content:flex-end;min-height:40px;margin-right:-6px}
+.stage{background:var(--surface);border-radius:28px;box-shadow:var(--shadow);padding:20px 12px;display:flex;flex-direction:column;gap:4px}
+.stage.wide{padding:28px 20px;gap:12px}
+.stage .lab{font:500 13px/16px var(--font);color:var(--text-muted);padding-left:4px}
+.stage .r{display:flex;gap:14px;align-items:flex-start;padding:17px 4px 15px}
+.stage .t{font:400 17px/24px var(--font);letter-spacing:-.005em}
+.stage .r.done .t{color:var(--text-subtle);text-decoration:line-through}
+.stage .adder{max-width:none;margin:0;width:100%}
+.stage .adder .t{flex:1;padding:14px 0}
+.stage .big{font:600 34px/40px var(--font);letter-spacing:-.02em}
+.stage .dls{margin:0}
+.stage .sh{margin:0;min-height:40px}
+.stage .sh .q{font:500 15px/20px var(--font);color:var(--accent);padding-right:18px}
+.stage .srow{display:flex;gap:14px;align-items:flex-start;padding:17px 20px 15px;border-radius:16px;background:var(--accent-soft)}
+.onb .text{display:flex;flex-direction:column;gap:10px;padding:0 8px}
+.onb .text p{margin:0;color:var(--text-muted)}
+.onb .bottom{display:flex;justify-content:space-between;align-items:center;padding:32px 0 0 8px}
+.onb .dots{display:flex;gap:6px}
+.onb .dots i{width:6px;height:6px;border-radius:3px;background:var(--line)}
+.onb .dots i.on{width:20px;background:var(--accent)}
+.onb .appicon.sm{width:72px;height:72px;border-radius:16px;margin:56px 0 24px 8px}
+.steps{list-style:none;margin:28px 0 0;padding:0;background:var(--surface);border-radius:20px}
+.steps li{display:flex;gap:14px;align-items:center;padding:14px 16px}
+.steps .si{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}
+.steps b{display:block;font:500 15px/20px var(--font)}
+.steps small{display:block;font:400 13px/18px var(--font);color:var(--text-muted)}
+.onb.light .oacts{display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:24px}
+.onb.light .oacts .btn.primary{width:100%}
+
+/* Today (empty) */
+.empty.big{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:96px 24px 24px;color:var(--text-muted)}
+.empty.big .st{width:35px;height:35px;border-width:2.8px;margin-bottom:4px}
+.empty.big h3{margin:0;font:600 22px/28px var(--font);letter-spacing:-.01em;color:var(--text)}
+.empty.big p{margin:0;max-width:280px}
 
 /* ---------- Mac sidebar (only on wide windows) ---------- */
 .side{display:none}

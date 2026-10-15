@@ -5,7 +5,7 @@ const KEY = "dp:user";
 function remember(user){
   try { if (user) localStorage.setItem(KEY, JSON.stringify(user)); else localStorage.removeItem(KEY); } catch(e){}
 }
-function remembered(){
+export function remembered(){
   try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; }
 }
 

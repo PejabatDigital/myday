@@ -88,7 +88,17 @@ conflict screens.
      Components 1:4, User Flows 1:6, Wireframes Phone 1:7, iPad 1:8, Desktop 1:9,
      Hi-fi 1:11, App icon 37:2.
 
-Done after step 7.
+8. ✅ **Onboarding** (Figma "Onboarding", node 49:2; added by Amin 15 Oct 2026), in
+   `src/onboarding.js`. Welcome (navy) shows when opening MyDay signed out, unless "Use
+   without an account" was chosen on that device (devices already holding tasks count as
+   chosen). Intro 1–3 after creating an account or choosing no account; the Add to Home
+   Screen tip after the intro or after signing in, once per device and only if not
+   installed (steps per browser: iPhone/iPad Safari, Android, Mac Safari, Chrome/Edge).
+   Decided with Amin: one white **Continue with email** button (opens `/signin`) instead
+   of Google; **sign-out keeps tasks on the device**, then shows "You're signed out" with
+   Continue with email + Use without an account. Empty Today = "Nothing planned yet".
+
+Done after step 8.
 
 ## Design — Clear day
 **Source of truth:** Figma "MyDay — App Design"

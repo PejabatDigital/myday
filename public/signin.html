@@ -123,7 +123,7 @@
     try {
       if (mode==="signin"){
         await post("sign-in/email", {email, password, callbackURL:"/signin?mode=verified"});
-        location.replace("/");
+        location.replace("/?from=signin");
         return;
       }
       if (mode==="signup"){
@@ -152,7 +152,7 @@
 
   // arriving from a link in an email
   const m = params.get("mode"), error = params.get("error");
-  if (m==="verified" && !error){ location.replace("/"); return; } // email confirmed and signed in
+  if (m==="verified" && !error){ location.replace("/?from=new"); return; } // email confirmed and signed in: the intro comes next
   if (m==="verified") show("signin", "That confirmation link has expired or was already used. Sign in and we'll send you a new one.", true);
   else if (m==="reset" && error) show("forgot", friendly({code:"INVALID_TOKEN"}), true);
   else if (m==="reset" && resetToken) show("reset");
