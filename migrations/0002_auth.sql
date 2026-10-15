@@ -1,4 +1,4 @@
--- Sign-in tables for Better Auth (Google sign-in). Column names and types match
+-- Sign-in tables for Better Auth (email and password). Column names and types match
 -- Better Auth 1.7's schema for SQLite; days.user_id / weeks.user_id hold "user".id.
 
 CREATE TABLE "user" (
@@ -23,7 +23,7 @@ CREATE TABLE "session" (
 );
 CREATE INDEX "session_userId_idx" ON "session" ("userId");
 
--- One row per Google login linked to a user. Google's tokens are stored encrypted.
+-- One row per login method linked to a user; "password" holds the scrambled password.
 CREATE TABLE "account" (
   "id"                    text NOT NULL PRIMARY KEY,
   "accountId"             text NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE "account" (
 );
 CREATE INDEX "account_userId_idx" ON "account" ("userId");
 
--- Short-lived values used during the Google sign-in round trip.
+-- Short-lived values, e.g. password reset links.
 CREATE TABLE "verification" (
   "id"         text NOT NULL PRIMARY KEY,
   "identifier" text NOT NULL,

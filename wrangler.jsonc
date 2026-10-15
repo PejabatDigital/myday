@@ -15,11 +15,10 @@
     "run_worker_first": ["/api/*"]
   },
 
-  // Sign-in settings. The secrets BETTER_AUTH_SECRET and GOOGLE_CLIENT_SECRET are set
+  // Sign-in settings. The secrets BETTER_AUTH_SECRET and RESEND_API_KEY are set
   // with `npx wrangler secret put …`, never here.
   "vars": {
-    "BETTER_AUTH_URL": "https://myday.kasahkod.cc",
-    "GOOGLE_CLIENT_ID": "PENDING-FROM-GOOGLE-CLOUD-CONSOLE"
+    "BETTER_AUTH_URL": "https://myday.kasahkod.cc"
   },
 
   "d1_databases": [

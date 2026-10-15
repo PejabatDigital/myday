@@ -23,15 +23,6 @@ export async function currentUser(){
   }
 }
 
-/* Goes to Google; Google sends the person back to the app once they've signed in. */
-export async function signIn(){
-  const r = await fetch("/api/auth/sign-in/social", {method:"POST", headers:{"content-type":"application/json"},
-    body:JSON.stringify({provider:"google", callbackURL:"/"})});
-  const d = await r.json().catch(()=>({}));
-  if (!r.ok || !d.url) throw new Error(d.message || "HTTP "+r.status);
-  location.href = d.url;
-}
-
 export async function signOut(){
   const r = await fetch("/api/auth/sign-out", {method:"POST", headers:{"content-type":"application/json"}, body:"{}"});
   if (!r.ok) throw new Error("HTTP "+r.status);

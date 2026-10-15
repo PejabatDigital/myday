@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sign in · MyDay</title>
+<meta name="description" content="Sign in to MyDay to keep your tasks on all your devices.">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<style>
+  :root{--bg:#F6F7F9;--surface:#FFFFFF;--subtle:#EEF1F6;--text:#13204A;--muted:#6B7389;--line:#E4E7EE;--accent:#2E5BFF;--on-accent:#FFFFFF;--danger:#E5484D;color-scheme:light dark}
+  @media (prefers-color-scheme:dark){:root{--bg:#0B1020;--surface:#131A2E;--subtle:#1A2238;--text:#E9ECF5;--muted:#8A93AB;--line:#222B44;--accent:#7B95FF;--on-accent:#0B1020;--danger:#FF7A7D}}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  main{max-width:400px;margin:0 auto;padding:max(32px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 48px max(20px,env(safe-area-inset-left))}
+  h1{font-size:28px;line-height:1.2;margin:24px 0 8px}
+  p{margin:8px 0}
+  .muted{color:var(--muted);font-size:15px}
+  a{color:var(--accent)}
+  form{display:grid;gap:12px;margin:20px 0}
+  label{display:grid;gap:4px;font-size:15px;font-weight:500}
+  input{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 14px;height:44px}
+  input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+  button{font:inherit;font-weight:500;height:44px;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent);cursor:pointer;margin-top:4px}
+  button:disabled{opacity:.5;cursor:default}
+  .links{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:15px}
+  .links a{padding:10px 0}
+  #msg{min-height:24px}
+  #msg.error{color:var(--danger)}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <p><a href="/">← Back to MyDay</a></p>
+  <h1 id="title">Sign in</h1>
+  <p class="muted" id="intro">Sign in to keep your tasks on your phone, iPad and Mac.</p>
+
+  <form id="form" novalidate>
+    <label id="emailField">Email
+      <input id="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required>
+    </label>
+    <label id="passwordField">Password
+      <input id="password" type="password" autocomplete="current-password" minlength="8" required>
+    </label>
+    <button id="submit" type="submit">Sign in</button>
+  </form>
+  <p id="msg" role="status" aria-live="polite"></p>
+
+  <div class="links">
+    <a href="#" data-mode="signup">Create an account</a>
+    <a href="#" data-mode="forgot">Forgot password?</a>
+    <a href="#" data-mode="signin">I already have an account</a>
+  </div>
+  <p class="muted" style="margin-top:32px"><a href="/privacy">Privacy</a></p>
+</main>
+<script>
+(function(){
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const resetToken = params.get("token");
+
+  const MODES = {
+    signin: {title:"Sign in", intro:"Sign in to keep your tasks on your phone, iPad and Mac.", button:"Sign in", email:true, password:"current-password", links:["signup","forgot"]},
+    signup: {title:"Create an account", intro:"Use your email and a password of at least 8 characters. We'll send you a link to confirm your email.", button:"Create account", email:true, password:"new-password", links:["signin"]},
+    forgot: {title:"Forgot password", intro:"Enter your email and we'll send you a link to choose a new password.", button:"Send reset link", email:true, password:null, links:["signin"]},
+    reset:  {title:"Choose a new password", intro:"At least 8 characters.", button:"Save new password", email:false, password:"new-password", links:[]},
+  };
+  let mode;
+
+  function show(m, message, isError){
+    mode = m;
+    const c = MODES[m];
+    $("title").textContent = c.title;
+    $("intro").textContent = c.intro;
+    $("submit").textContent = c.button;
+    $("emailField").hidden = !c.email;
+    $("passwordField").hidden = !c.password;
+    if (c.password) $("password").autocomplete = c.password;
+    document.querySelectorAll("[data-mode]").forEach(a=>{ a.hidden = !c.links.includes(a.dataset.mode); });
+    say(message || "", isError);
+  }
+  function say(text, isError){ $("msg").textContent = text; $("msg").className = isError ? "error" : ""; }
+
+  async function post(path, body){
+    const r = await fetch("/api/auth/"+path, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body)});
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok){ const e = new Error(d.message || "HTTP "+r.status); e.code = d.code; e.status = r.status; throw e; }
+    return d;
+  }
+
+  function friendly(e){
+    if (!navigator.onLine) return "You're offline. Try again when you're back online.";
+    switch (e.code){
+      case "INVALID_EMAIL_OR_PASSWORD": return "That email and password don't match.";
+      case "INVALID_EMAIL": return "Please check the email address.";
+      case "PASSWORD_TOO_SHORT": return "Please use at least 8 characters.";
+      case "PASSWORD_TOO_LONG": return "Please use at most 128 characters.";
+      case "EMAIL_NOT_VERIFIED": return "Please confirm your email first. We've sent you a new link.";
+      case "INVALID_TOKEN": return "That link has expired or was already used. Ask for a new one below.";
+    }
+    if (e.status===429) return "Too many tries. Please wait a minute and try again.";
+    return "Something went wrong ("+e.message+"). Please try again.";
+  }
+
+  $("form").addEventListener("submit", async ev=>{
+    ev.preventDefault();
+    const email = $("email").value.trim(), password = $("password").value;
+    if (MODES[mode].email && !email) return say("Please enter your email.", true);
+    if (MODES[mode].password && !password) return say("Please enter a password.", true);
+    $("submit").disabled = true;
+    say("");
+    try {
+      if (mode==="signin"){
+        await post("sign-in/email", {email, password, callbackURL:"/signin?mode=verified"});
+        location.replace("/");
+        return;
+      }
+      if (mode==="signup"){
+        await post("sign-up/email", {email, password, name:"", callbackURL:"/signin?mode=verified"});
+        $("password").value = "";
+        show("signin", "Check your email. We've sent a link to "+email+". Open it to finish creating your account.");
+      } else if (mode==="forgot"){
+        await post("request-password-reset", {email, redirectTo:"/signin?mode=reset"});
+        show("signin", "If there's a MyDay account for "+email+", we've sent it a link to choose a new password.");
+      } else if (mode==="reset"){
+        await post("reset-password", {newPassword:password, token:resetToken});
+        $("password").value = "";
+        history.replaceState(null, "", "/signin");
+        show("signin", "Your new password is saved. You can sign in now.");
+      }
+    } catch(e){
+      say(friendly(e), true);
+      if (e.code==="INVALID_TOKEN") show("forgot", friendly(e), true);
+    }
+    $("submit").disabled = false;
+  });
+
+  document.querySelectorAll("[data-mode]").forEach(a=>a.addEventListener("click", ev=>{ ev.preventDefault(); show(a.dataset.mode); $(MODES[a.dataset.mode].email ? "email" : "password").focus(); }));
+
+  // arriving from a link in an email
+  const m = params.get("mode"), error = params.get("error");
+  if (m==="verified" && !error){ location.replace("/"); return; } // email confirmed and signed in
+  if (m==="verified") show("signin", "That confirmation link has expired or was already used. Sign in and we'll send you a new one.", true);
+  else if (m==="reset" && error) show("forgot", friendly({code:"INVALID_TOKEN"}), true);
+  else if (m==="reset" && resetToken) show("reset");
+  else show(m==="signup" ? "signup" : "signin");
+})();
+</script>
+</body>
+</html>

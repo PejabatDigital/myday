@@ -1,6 +1,6 @@
 import { initStore, readDay, writeDay, readDays, readWeek, writeWeek, flushPending } from "./store/index.js";
 import { registerSW } from "./pwa.js";
-import { currentUser, signIn, signOut } from "./account.js";
+import { currentUser, signOut } from "./account.js";
 
 (function(){
 "use strict";
@@ -700,7 +700,7 @@ function renderAccount(){
     const who = document.createElement("span"); who.textContent = "Signed in as "+(S.user.email || S.user.name);
     a.append(who, button("Sign out", async ()=>{ await signOut(); S.user = null; renderAccount(); }));
   } else {
-    a.append(button("Sign in with Google", async ()=>{ await Promise.all([flush(), flushWeek()]); await signIn(); }));
+    a.append(button("Sign in", async ()=>{ await Promise.all([flush(), flushWeek()]); location.href = "/signin"; }));
   }
   const p = document.createElement("a"); p.href = "/privacy"; p.textContent = "Privacy"; a.append(p);
 }

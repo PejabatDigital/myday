@@ -31,8 +31,8 @@ npm run db:migrate:local         # once, and after adding a migration
 npm run build && npm run dev:api # app + API at http://localhost:8787
 ```
 
-While `dev:api` runs, `npm run dev` forwards `/api` to it. Test Google sign-in on
-http://localhost:8787 (the address registered with Google).
+While `dev:api` runs, `npm run dev` forwards `/api` to it. Test sign-in on
+http://localhost:8787/signin (the address in `BETTER_AUTH_URL`).
 
 ## Database
 

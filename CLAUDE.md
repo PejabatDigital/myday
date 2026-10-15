@@ -10,7 +10,7 @@ our own, so MyDay works for Amin and for anyone else who signs in.
 
 ## What we're building — and only this
 1. **Online storage** for everyone's tasks (Cloudflare Worker + D1). *(built — see step 4)*
-2. **Google sign-in**, so each person sees only their own tasks.
+2. **Email and password sign-in**, so each person sees only their own tasks.
 3. **Sync**, so the same tasks appear on phone, iPad and Mac.
 4. **The new look** (Clear day, from Figma).
 
@@ -18,8 +18,8 @@ Then we're done. Already working: device storage, offline use, Add to Home Scree
 
 **Not doing** (don't build, don't suggest unless Amin asks): automated tests, preview /
 staging environments, branches or pull requests, importing Amin's old tasks, passkeys,
-email sign-in, account deletion, export/import, extra Settings screens, App Store work,
-analytics, conflict screens.
+account deletion, export/import, extra Settings screens, App Store work, analytics,
+conflict screens.
 
 ## Stack (as it stands)
 - Frontend: vanilla HTML/CSS/JS with Vite — `index.html`, `src/`. No UI framework.
@@ -28,6 +28,12 @@ analytics, conflict screens.
   database D1 `myday-production`. Config `wrangler.jsonc`. Live at `myday.kasahkod.cc`.
 - Every row in the database belongs to a `user_id`; the API only touches the signed-in
   user's rows.
+- Email for kasahkod.cc (set up by Amin; don't touch its DNS records in Cloudflare):
+  iCloud hosts the mailboxes hello@ and no-reply@; Resend (domain kasahkod.cc, Tokyo
+  region, open/click tracking off) sends the app's account emails from no-reply@; DMARC
+  reports go to no-reply@. Resend because Cloudflare is on the free plan.
+- Cloudflare Workers free plan: 10 ms CPU per request. Passwords use PBKDF2-SHA256 via Web
+  Crypto at 5,000 rounds (Amin's choice over upgrading), not Better Auth's scrypt (~65 ms).
 
 ## How we work
 - Work directly on `main`. No branches, no pull requests. Pushing to `main` updates the
@@ -45,14 +51,15 @@ analytics, conflict screens.
 2. ✅ Device storage and offline.
 3. ✅ Installable app and final icon.
 4. ✅ Online storage (Worker API + D1 `myday-production`), live at myday.kasahkod.cc.
-5. **Google sign-in.** "Continue with Google" (Better Auth's Google provider, basic
-   profile + email only). Stay signed in for a long time (~60 days, renewing) so the
-   installed app rarely asks again. A simple way to sign out. The app still works
-   signed-out on one device.
-   - Amin does the Google Cloud Console part. Give him the exact steps and the exact
-     addresses to paste, in plain words, for myday.kasahkod.cc and localhost.
-   - Google requires a privacy policy page before the public can sign in: add one short,
-     plain page at `/privacy` (what's stored, where, that there's no tracking).
+5. **Email and password sign-in.** Better Auth's email and password, on its own page
+   `/signin` (sign in, create account, forgot password, choose a new password). Anyone can
+   sign up; new accounts must confirm their email (link by email) before they can sign in.
+   "Forgot password" emails a reset link. Emails go through Resend from
+   no-reply@kasahkod.cc (secret `RESEND_API_KEY`). Stay signed in for a long time
+   (~60 days, renewing) so the installed app rarely asks again. A simple way to sign out.
+   The app still works signed-out on one device.
+   - Plain privacy page at `/privacy`: what's stored (email, scrambled password, tasks),
+     where, Resend only for account emails, no tracking. Contact hello@kasahkod.cc.
 6. **Sync.** Connect device storage to online storage for signed-in users: send changes
    up, pull changes down, on open, on return to the app, on reconnect, and every ~30 s
    while open. Rule: the latest edit wins. Show the simple footer status (Synced /
