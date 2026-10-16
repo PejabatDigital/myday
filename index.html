@@ -8,6 +8,9 @@
 <meta name="theme-color" content="#F6F7F9" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0B1020" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="/manifest.webmanifest">
+<script>/* Appearance chosen in Settings (this device only), applied before the page draws */
+try { var t = localStorage.getItem("dp:theme"); if (t==="light"||t==="dark"){ document.documentElement.dataset.theme = t;
+  document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.dataset.color = m.content; m.content = t==="light" ? "#F6F7F9" : "#0B1020"; }); } } catch(e){}</script>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
@@ -32,7 +35,7 @@
   <div class="mini" id="mini"></div>
   <div class="side-foot">
     <div class="sync" id="sideSync"></div>
-    <div class="acct" id="sideAcct"></div>
+    <button class="navi" id="navSettings"><i class="ic ic-settings"></i><span>Settings</span></button>
   </div>
 </aside>
 
@@ -48,6 +51,7 @@
       <button class="ib plain" id="next" aria-label="Next month"><i class="ic ic-right"></i></button>
       <button class="ib" id="vMonth" aria-pressed="false" aria-label="Month"><i class="ic ic-calendar"></i></button>
       <button class="ib" id="notesBtn" aria-pressed="false" aria-label="Notes"><i class="ic ic-note"></i></button>
+      <button class="ib" id="setBtn" aria-label="Settings"><i class="ic ic-settings"></i></button>
     </div>
   </header>
 
@@ -68,7 +72,6 @@
     <div class="eod" id="eod" hidden></div>
     <div class="foot">
       <div class="sync" id="foot"></div>
-      <div class="acct" id="acct"></div>
     </div>
   </section>
 </div>
@@ -112,6 +115,7 @@
 
 <div class="menu" id="menu" hidden role="menu"></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="settings" id="settings" hidden></div>
 <div class="onb" id="onboard" hidden></div>
 
 <script type="module" src="/src/app.js"></script>

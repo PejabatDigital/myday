@@ -18,8 +18,7 @@ Then we're done. Already working: device storage, offline use, Add to Home Scree
 
 **Not doing** (don't build, don't suggest unless Amin asks): automated tests, preview /
 staging environments, branches or pull requests, importing Amin's old tasks, passkeys,
-account deletion, export/import, extra Settings screens, App Store work, analytics,
-conflict screens.
+export/import, extra Settings screens, App Store work, analytics, conflict screens.
 
 ## Stack (as it stands)
 - Frontend: vanilla HTML/CSS/JS with Vite — `index.html`, `src/`. No UI framework.
@@ -75,8 +74,7 @@ conflict screens.
      by Amin, 15 Oct 2026). Amin may adjust it afterwards.
    - Decided 15 Oct 2026: **restyle only** — keep today's behaviour (⋯ task menu, "Carry
      to tomorrow", etc.), even where Figma shows press-and-hold sheets, move to another
-     day, Undo or an end-of-day sheet. **No gear/Settings** for now (Settings comes later);
-     sign in / sign out stay as quiet text under the list (and in the Mac sidebar). Goes
+     day, Undo or an end-of-day sheet. (Settings and the gear came later, in step 9.) Goes
      live **all at once** when every part is done; show Amin screenshots along the way.
    - Built (15 Oct 2026): `src/styles.css` (tokens, components, layouts), Instrument Sans
      self-hosted in `public/fonts/` (no Google requests), icons from Figma in
@@ -98,7 +96,18 @@ conflict screens.
    of Google; **sign-out keeps tasks on the device**, then shows "You're signed out" with
    Continue with email + Use without an account. Empty Today = "Nothing planned yet".
 
-Done after step 8.
+9. ✅ **Settings** (added by Amin 16 Oct 2026; no Figma, built from the components), in
+   `src/settings.js`: its own page at `/settings` with Back at the top left. Opened by the
+   gear in the header (phone, iPad) or "Settings" at the bottom of the Mac sidebar.
+   Sign in / sign out live here only; the list footer keeps just the sync status.
+   - Account: email, **Change password** (emails the reset link), Sign out, **Delete my
+     account** — type DELETE to confirm; removes everything online
+     (`DELETE /api/account`) and also clears this device, then Welcome.
+   - Appearance: System / Light / Dark, **per device** (`dp:theme`).
+   - About: version **2.0**, Privacy, Contact hello@kasahkod.cc. Footer `{ kasah kod }`
+     (small, faded, as Quran Daily's welcome screen).
+
+Done after step 9.
 
 ## Design — Clear day
 **Source of truth:** Figma "MyDay — App Design"
@@ -174,7 +183,7 @@ reason, note (html), from, carried }] }`
 Week note, keyed by Monday's date: `{ note (html) }`. Stored status `cf` = "Carried" in the UI.
 Database tables: `days`, `weeks`, `sync_seq` (`migrations/0001_init.sql`).
 API: `PUT /api/days/:date`, `PUT /api/weeks/:start`, `GET /api/changes?since=N`,
-`GET /api/health`.
+`DELETE /api/account`, `GET /api/health`.
 
 ## Conventions
 - No-frills: no reminders or notifications. New features only when Amin asks.

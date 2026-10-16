@@ -1,7 +1,8 @@
-import { initStore, readDay, writeDay, readDays, readWeek, writeWeek, flushPending } from "./store/index.js";
+import { initStore, readDay, writeDay, readDays, readWeek, writeWeek, flushPending, clearDevice } from "./store/index.js";
 import { registerSW } from "./pwa.js";
 import { currentUser, signOut, remembered } from "./account.js";
 import * as onb from "./onboarding.js";
+import * as settings from "./settings.js";
 import { emptyDay, normalize, esc, RICH } from "./day.js";
 import { createSync } from "./sync.js";
 
@@ -764,24 +765,35 @@ function redrawKeepingFocus(){
   if (el && el!==document.activeElement){ el.focus(); try { if (from!=null) el.setSelectionRange(from, to); } catch(e){} }
 }
 
-/* ---------- account ---------- */
+/* ---------- account (shown in Settings, see src/settings.js) ---------- */
 S.user = null;
-function renderAccount(){ ["acct","sideAcct"].forEach(id=>accountInto($(id))); }
-function accountInto(a){
-  a.textContent = "";
-  const button = (label, run)=>{ const b = document.createElement("button"); b.textContent = label;
-    b.onclick = async ()=>{ b.disabled = true; try { await run(); } catch(e){ setFoot(navigator.onLine ? "Something went wrong ("+errMsg(e)+"). Please try again." : "You're offline. Try again when you're back online."); } b.disabled = false; };
-    return b; };
-  if (S.user){
-    const who = document.createElement("span"); who.textContent = "Signed in as "+(S.user.email || S.user.name);
-    a.append(who, button("Sign out", async ()=>{ await Promise.all([flush(), flushWeek()]); await sync.run(); await signOut(); sync.stop(); S.user = null; renderAccount(); setFoot();
-      onb.signedOut(onb.close); }));
-  } else {
-    const go = path => async ()=>{ await Promise.all([flush(), flushWeek()]); location.href = path; };
-    a.append(button("Sign in", go("/signin")), button("Create account", go("/signin?mode=signup")));
-  }
-  const p = document.createElement("a"); p.href = "/privacy"; p.textContent = "Privacy"; a.append(p);
-}
+function renderAccount(){ settings.refresh(); }
+const flushAll = () => Promise.all([flush(), flushWeek()]);
+settings.init({
+  user: ()=>S.user,
+  signIn: async ()=>{ await flushAll(); location.href = "/signin"; },
+  signOut: async ()=>{
+    await flushAll(); await sync.run(); await signOut(); sync.stop(); S.user = null; setFoot();
+    settings.close(); onb.signedOut(onb.close);
+  },
+  sendReset: async email=>{
+    const r = await fetch("/api/auth/request-password-reset", {method:"POST", headers:{"content-type":"application/json"},
+      body:JSON.stringify({email, redirectTo:"/signin?mode=reset"})});
+    if (!r.ok) throw new Error("HTTP "+r.status);
+  },
+  deleteAccount: async ()=>{
+    await flushAll(); sync.stop();
+    let r;
+    try { r = await fetch("/api/account", {method:"DELETE"}); }
+    catch(e){ if (S.user) sync.start(); throw new Error("You're offline. Connect to delete your account."); }
+    if (r.status===401){ S.user = null; setFoot(); throw new Error("You've been signed out on this device. Sign in again, then delete your account."); }
+    if (!r.ok){ sync.start(); throw new Error("Couldn't delete your account. Please try again."); }
+    await clearDevice(); // nothing of theirs stays here
+    location.replace("/");
+  },
+});
+$("setBtn").onclick = settings.open;
+$("navSettings").onclick = settings.open;
 
 /* ---------- new version ---------- */
 function offerUpdate(apply){

@@ -6,10 +6,13 @@
 <title>Privacy · MyDay</title>
 <meta name="description" content="What MyDay stores, where, and how to delete it.">
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<script>try { var t = localStorage.getItem("dp:theme"); if (t==="light"||t==="dark") document.documentElement.dataset.theme = t; } catch(e){}</script>
 <style>
   @font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400 600;font-display:swap;src:url(/fonts/instrument-sans-latin.woff2) format("woff2")}
   :root{--bg:#F6F7F9;--text:#13204A;--muted:#6B7389;--accent:#2E5BFF;color-scheme:light dark}
-  @media (prefers-color-scheme:dark){:root{--bg:#0B1020;--text:#E9ECF5;--muted:#8A93AB;--accent:#7B95FF}}
+  @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0B1020;--text:#E9ECF5;--muted:#8A93AB;--accent:#7B95FF}}
+  :root[data-theme=dark]{--bg:#0B1020;--text:#E9ECF5;--muted:#8A93AB;--accent:#7B95FF}
+  :root[data-theme=light]{color-scheme:light} :root[data-theme=dark]{color-scheme:dark}
   body{margin:0;background:var(--bg);color:var(--text);font:400 16px/26px "Instrument Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
   main{max-width:640px;margin:0 auto;padding:max(32px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 48px max(20px,env(safe-area-inset-left))}
   h1{font-size:34px;line-height:40px;font-weight:600;letter-spacing:-.02em;margin:24px 0 4px}
@@ -23,7 +26,7 @@
 <main>
   <p><a href="/">← Back to MyDay</a></p>
   <h1>Privacy</h1>
-  <p class="muted">Last updated 15 October 2026</p>
+  <p class="muted">Last updated 16 October 2026</p>
 
   <p>MyDay is a simple daily to-do app made by Kasah Kod. This page explains, in plain words,
   what it keeps about you.</p>
@@ -53,10 +56,12 @@
   MyDay uses one cookie, only to keep you signed in.</p>
 
   <h2>Deleting your data</h2>
-  <p>To delete your account and everything stored with it, email
-  <a href="mailto:hello@kasahkod.cc">hello@kasahkod.cc</a> from the address you sign in
-  with. We'll delete it within 30 days and let you know when it's done. Signing out removes
-  you from that device; your tasks already on it stay there until you clear them.</p>
+  <p>You can delete your account yourself: open Settings, then Delete my account. It removes
+  your account and everything stored online straight away, and clears the device you do it
+  on. You can also email <a href="mailto:hello@kasahkod.cc">hello@kasahkod.cc</a> from the
+  address you sign in with, and we'll delete it within 30 days.</p>
+  <p>Signing out removes you from that device; your tasks already on it stay there until you
+  clear them.</p>
 
   <h2>Questions</h2>
   <p>Email <a href="mailto:hello@kasahkod.cc">hello@kasahkod.cc</a>.</p>

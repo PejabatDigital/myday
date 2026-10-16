@@ -128,3 +128,10 @@ async function migrateLocalStorage(){
   }
   ls.set(MIGRATED, new Date().toISOString());
 }
+
+/* Empties this device: every day, week note and unsent change, plus MyDay's saved
+   settings (localStorage "dp:*"). Used after deleting the account. */
+export async function clearDevice(){
+  await tx(db, [...STORES,"outbox"], "readwrite", t=>{ [...STORES,"outbox"].forEach(s=>t.objectStore(s).clear()); });
+  ls.keys().filter(k=>k && k.startsWith("dp:")).forEach(k=>ls.del(k));
+}

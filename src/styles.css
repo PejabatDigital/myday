@@ -47,7 +47,7 @@ a{color:var(--accent)}
 .ic-calendar{--i:url(/icons/ui/calendar.svg)} .ic-note{--i:url(/icons/ui/note.svg)} .ic-note-s{--i:url(/icons/ui/note-small.svg)}
 .ic-left{--i:url(/icons/ui/left.svg)} .ic-right{--i:url(/icons/ui/right.svg)} .ic-plus{--i:url(/icons/ui/plus.svg)}
 .ic-sun{--i:url(/icons/ui/sun.svg)} .ic-list{--i:url(/icons/ui/list.svg)} .ic-checklist{--i:url(/icons/ui/checklist.svg)}
-.ic-link{--i:url(/icons/ui/link.svg)} .ic-send{--i:url(/icons/ui/send.svg)}
+.ic-link{--i:url(/icons/ui/link.svg)} .ic-settings{--i:url(/icons/ui/settings.svg)} .ic-send{--i:url(/icons/ui/send.svg)}
 .ic-share{--i:url(/icons/ui/share.svg)} .ic-add-square{--i:url(/icons/ui/add-square.svg)} .ic-tick{--i:url(/icons/ui/tick.svg)}
 .ic-more{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='4.5' cy='10' r='1.5'/%3E%3Ccircle cx='10' cy='10' r='1.5'/%3E%3Ccircle cx='15.5' cy='10' r='1.5'/%3E%3C/svg%3E")}
 
@@ -92,7 +92,7 @@ h1 .yr{font-size:22px;line-height:28px;letter-spacing:-.01em;color:var(--text-su
 .mview h1{font-size:min(34px,8vw)} .mview h1 .yr{font-size:min(22px,5.2vw);margin-left:6px}
 #prev,#next{display:none}
 .mview #prev,.mview #next{display:inline-flex}
-.mview #vMonth,.mview #notesBtn{display:none}
+.mview #vMonth,.mview #notesBtn,.mview #setBtn{display:none}
 
 /* Day Line: one segment per task — done blue, missed red, carried soft blue, open as track */
 .dayline{padding:20px 20px 0}
@@ -196,14 +196,6 @@ textarea.t::placeholder{color:var(--text-subtle)}
 
 /* footer: sync status, sign in / out */
 .foot{margin-top:32px;padding:0 8px;display:flex;flex-direction:column;gap:4px}
-.acct{display:flex;align-items:center;flex-wrap:wrap;gap:0 4px;font:400 13px/18px var(--font);color:var(--text-muted)}
-.acct span{margin-right:4px;overflow-wrap:anywhere}
-.acct button,.acct a{height:40px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;font:500 15px/20px var(--font);color:var(--accent);text-decoration:none}
-.acct button:first-of-type,.acct span + button{margin-left:-10px}
-.acct span + button{margin-left:0}
-.acct button:hover,.acct a:hover{background:var(--subtle)}
-.acct a{color:var(--text-muted);font-weight:400;font-size:13px}
-.acct button:disabled{opacity:.5;cursor:default}
 
 /* ---------- month ---------- */
 .month{padding:16px 12px 0}
@@ -338,6 +330,38 @@ html.onb-open,html.onb-open body{overflow:hidden}
 .empty.big h3{margin:0;font:600 22px/28px var(--font);letter-spacing:-.01em;color:var(--text)}
 .empty.big p{margin:0;max-width:280px}
 
+/* ---------- Settings: its own page ---------- */
+html.set-open,html.set-open body{overflow:hidden}
+.settings{position:fixed;inset:0;z-index:50;overflow-y:auto;background:var(--bg);color:var(--text)}
+.settings .in{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 20px calc(env(safe-area-inset-bottom,0px) + 32px)}
+.sbar{display:flex;margin-left:-10px}
+.btn.back{padding:0 14px 0 6px;gap:2px}
+.stitle{margin:8px 0 8px;font:600 34px/40px var(--font);letter-spacing:-.02em;white-space:normal}
+.sgh{margin:24px 0 8px;padding-left:8px;font:500 13px/16px var(--font);color:var(--text-muted)}
+.card{background:var(--surface);border-radius:16px;overflow:hidden;margin-bottom:12px}
+.card.pad{padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px}
+.card.pad p{margin:0;color:var(--text-muted)}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;padding:0 20px;font:500 15px/20px var(--font);color:var(--text);text-align:left;text-decoration:none}
+.srow + .srow{box-shadow:inset 0 1px 0 var(--line)}
+.srow .v{font-weight:400;color:var(--text-muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .v.link{color:var(--accent)}
+.srow .ic{width:18px;height:18px;color:var(--text-subtle)}
+.srow.act{color:var(--accent)}
+.srow.del{color:var(--danger)}
+button.srow:hover,a.srow:hover{background:var(--subtle)}
+button.srow:disabled{opacity:.5;cursor:default}
+.btn.wide{width:100%}
+.seg.wide{display:flex}
+.seg.wide button{flex:1}
+.smsg{margin:-4px 8px 12px;font:400 13px/18px var(--font);color:var(--text-muted)}
+.card .smsg{margin:0}
+.smsg.bad{color:var(--danger)}
+.field{display:flex;flex-direction:column;gap:8px;font:500 13px/16px var(--font);color:var(--text-muted)}
+.field input{height:48px;border:2px solid transparent;border-radius:12px;background:var(--subtle);padding:0 14px;font:400 17px/24px var(--font);letter-spacing:-.005em;color:var(--text)}
+.field input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.field input::placeholder{color:var(--text-subtle)}
+.kk{margin:32px 0 0;text-align:center;font:500 12px/16px var(--font);color:var(--text-muted);opacity:.7}
+
 /* ---------- Mac sidebar (only on wide windows) ---------- */
 .side{display:none}
 .brand{display:flex;align-items:center;gap:10px;padding-left:4px;font:600 22px/28px var(--font);letter-spacing:-.01em}
@@ -419,7 +443,7 @@ html.onb-open,html.onb-open body{overflow:hidden}
   .mview .wrap{padding-right:400px}
   .wrap > *{max-width:760px}
   .mview .wrap > *{max-width:none}
-  .week,#vMonth,#notesBtn,#closeNotes,.page > .foot{display:none!important}
+  .week,#vMonth,#notesBtn,#setBtn,#closeNotes,.page > .foot{display:none!important}
   .top{padding-top:0}
   /* Add Bar sits at the top, where the eye already is */
   .addwrap{position:static;padding:24px 0 0;background:none;pointer-events:auto}
@@ -453,10 +477,8 @@ html.onb-open,html.onb-open body{overflow:hidden}
   .mini .g .today{color:var(--accent);font-weight:500}
   .mini .g .sel{background:var(--text);color:var(--surface)}
   .mini .g .sel:hover{background:var(--text)}
-  .side-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
-  .side-foot .acct{flex-direction:column;align-items:flex-start;gap:0}
-  .side-foot .acct span{padding-left:12px;margin:0}
-  .side-foot .acct button,.side-foot .acct a{margin-left:2px!important}
+  .side-foot{margin-top:auto;display:flex;flex-direction:column;gap:12px}
+  .side-foot .sync{padding-left:4px}
 }
 
 /* touch devices: 44pt tap targets, 16px+ inputs so iOS doesn't zoom on focus */

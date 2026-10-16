@@ -46,3 +46,15 @@ export async function changes(db, userId, since, limit){
     more: all.length > limit,
   };
 }
+
+/* Deletes everything stored for one person: tasks, notes, sign-in records and the account. */
+export async function deleteAccount(db, userId){
+  await db.batch([
+    db.prepare("DELETE FROM days WHERE user_id = ?1").bind(userId),
+    db.prepare("DELETE FROM weeks WHERE user_id = ?1").bind(userId),
+    db.prepare("DELETE FROM sync_seq WHERE user_id = ?1").bind(userId),
+    db.prepare('DELETE FROM "session" WHERE "userId" = ?1').bind(userId),
+    db.prepare('DELETE FROM "account" WHERE "userId" = ?1').bind(userId),
+    db.prepare('DELETE FROM "user" WHERE "id" = ?1').bind(userId),
+  ]);
+}
