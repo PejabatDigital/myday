@@ -100,6 +100,8 @@ export/import, extra Settings screens, App Store work, analytics, conflict scree
    `src/settings.js`: its own page at `/settings` with Back at the top left. Opened by the
    gear in the header (phone, iPad) or "Settings" at the bottom of the Mac sidebar.
    Sign in / sign out live here only; the list footer keeps just the sync status.
+   The gear is a cog (`public/icons/ui/settings.svg`, after Lucide), not Figma's
+   sun-like icon, so it can't be confused with Today's sun (Amin, 16 Oct 2026).
    - Account: email, **Change password** (emails the reset link), Sign out, **Delete my
      account** — type DELETE to confirm; removes everything online
      (`DELETE /api/account`) and also clears this device, then Welcome.
