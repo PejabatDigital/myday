@@ -153,9 +153,12 @@ Status circle (open, done, missed, carried, suggested) · Task Row · Tag · But
 Icon Button · Add Bar · Week Day · Day Line · Segmented Control · Month Cell · Sync
 Status · Toast · Text Field. Icons: 24px, 1.75 stroke, round ends.
 
-### App icon — final (A3, Day Line)
-Navy #13204A, white circle with blue #2E5BFF tick, three white segments and one blue.
-Files in `public/icons/`. Don't redraw it in code.
+### App icon — final (day mode, 30 Oct 2026)
+White background, a large navy #13204A circle with a white tick, and two bars under it:
+navy, then blue #2E5BFF. Replaced the dark A3 icon (navy tile, small white circle, four
+bars), which Amin found too dark and easy to miss among other apps. Files in
+`public/icons/`, `public/favicon.ico` and `resources/icon-1024.png`. Don't redraw it in
+code. (The Figma App icon page, 37:2, still shows the old A3 icon.)
 
 ### Key interactions (same behaviour as today, new look)
 - Tap the status circle: open ↔ done. Press and hold a task: actions sheet — done,
