@@ -381,8 +381,14 @@ button.srow:disabled{opacity:.5;cursor:default}
   .scrim{display:block;position:fixed;inset:0;background:var(--scrim);z-index:19}
   .ed{min-height:0}
 }
+/* Month on a phone: the year goes on its own line under the month, like the date under
+   the weekday in Day, so the month name fits beside Today and the arrows */
+@media (max-width:767px){
+  .mview h1{font-size:34px}
+  .mview h1 .yr{display:block;margin:2px 0 0;font:400 15px/22px var(--font);letter-spacing:0;color:var(--text-muted)}
+}
 @media (max-width:374px){
-  h1{font-size:30px} .week{padding-inline:4px} .wd{width:40px}
+  h1{font-size:30px} .mview h1{font-size:min(30px,7vw)} .week{padding-inline:4px} .wd{width:40px}
 }
 
 /* ---------- iPad landscape and Mac: bigger date, panels on the right ---------- */
