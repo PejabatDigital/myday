@@ -4,3 +4,5 @@ BETTER_AUTH_URL=http://localhost:8787
 BETTER_AUTH_SECRET=
 # From resend.com → API Keys (sending access, kasahkod.cc). Sends real emails.
 RESEND_API_KEY=
+# true: print sign-in codes in the dev:api terminal instead of emailing them
+EMAIL_TO_CONSOLE=true

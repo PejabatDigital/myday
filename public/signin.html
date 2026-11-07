@@ -14,152 +14,199 @@
   :root[data-theme=dark]{--bg:#0B1020;--surface:#131A2E;--subtle:#1A2238;--text:#E9ECF5;--muted:#8A93AB;--subtle-text:#5D6680;--line:#222B44;--accent:#7B95FF;--on-accent:#0B1020;--danger:#FF7A7D}
   :root[data-theme=light]{color-scheme:light} :root[data-theme=dark]{color-scheme:dark}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:400 15px/22px "Instrument Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  body{margin:0;background:var(--bg);color:var(--text);font:400 15px/22px var(--f);-webkit-font-smoothing:antialiased}
   main{max-width:400px;margin:0 auto;padding:max(32px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 48px max(20px,env(safe-area-inset-left))}
   h1{font-size:34px;line-height:40px;font-weight:600;letter-spacing:-.02em;margin:24px 0 8px}
   p{margin:8px 0}
   .muted{color:var(--muted)}
+  .muted b{font-weight:500;color:var(--text)}
   a{color:var(--accent);text-decoration:none}
-  form{display:grid;gap:16px;margin:24px 0 12px}
+  form{display:grid;gap:16px;margin:24px 0 8px}
   label{display:grid;gap:8px;font:500 13px/16px var(--f);color:var(--muted)}
   input{font:400 17px/24px var(--f);letter-spacing:-.005em;color:var(--text);background:var(--subtle);border:2px solid transparent;border-radius:12px;padding:0 14px;height:48px;width:100%}
   input::placeholder{color:var(--subtle-text)}
   input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
-  button{font:500 15px/20px var(--f);height:40px;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent);cursor:pointer;padding:0 18px;margin-top:4px}
+  input.code{font:600 22px/28px var(--f);letter-spacing:.3em}
+  input.code::placeholder{letter-spacing:.3em}
+  button{font:500 15px/20px var(--f);height:40px;border:0;border-radius:999px;background:var(--accent);color:var(--on-accent);cursor:pointer;padding:0 18px;margin-top:4px;width:100%}
   button:disabled{opacity:.5;cursor:default}
-  button.secondary{background:var(--subtle);color:var(--text);margin:0}
-  .alt{display:grid;gap:8px;margin:28px 0 8px}
-  .alt p{margin:0;text-align:center;color:var(--muted)}
-  .links{display:flex;flex-wrap:wrap;gap:4px 20px}
-  .links a{padding:10px 0;font-weight:500}
-  #msg{min-height:22px}
-  #msg.error{color:var(--danger)}
+  button.quiet{background:transparent;color:var(--accent);margin:0}
+  button.quiet:disabled{color:var(--muted)}
+  button.link{background:none;color:var(--muted);height:auto;padding:10px 0;margin:0;font:400 13px/18px var(--f)}
+  .acts{display:grid;gap:4px}
+  .hint{font:400 13px/18px var(--f);color:var(--muted);margin:-8px 0 0}
+  .msg{font:400 13px/18px var(--f);margin:-8px 0 0}
+  .msg.error{color:var(--danger)}
+  .foot{margin-top:32px;font:400 12px/16px var(--f);color:var(--muted)}
+  .foot .kk{opacity:.7;font-weight:500}
   [hidden]{display:none!important}
 </style>
 </head>
 <body>
 <main>
   <p><a href="/">← Back to MyDay</a></p>
-  <h1 id="title">Sign in</h1>
-  <p class="muted" id="intro">Sign in to keep your tasks on your phone, iPad and Mac.</p>
 
-  <form id="form" novalidate>
-    <label id="emailField">Email
-      <input id="email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required>
-    </label>
-    <label id="passwordField">Password
-      <input id="password" type="password" autocomplete="current-password" minlength="8" required>
-    </label>
-    <button id="submit" type="submit">Sign in</button>
-  </form>
-  <p id="msg" role="status" aria-live="polite"></p>
+  <section id="emailStep">
+    <h1>Sign in to MyDay</h1>
+    <p class="muted">Enter your email and we'll send you a 6-digit code. New here? This creates your account.</p>
+    <form id="emailForm" novalidate>
+      <label>Email
+        <input id="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com">
+      </label>
+      <p class="msg" id="emailMsg" role="status" aria-live="polite" hidden></p>
+      <button id="sendBtn" type="submit">Send code</button>
+    </form>
+  </section>
 
-  <div class="links">
-    <a href="#" data-mode="forgot">Forgot password?</a>
-    <a href="#" data-mode="signin">Back to sign in</a>
-  </div>
-  <div class="alt" id="alt">
-    <p id="altText"></p>
-    <button class="secondary" id="altButton" type="button"></button>
-  </div>
-  <p class="muted" style="margin-top:32px"><a href="/privacy">Privacy</a></p>
+  <section id="codeStep" hidden>
+    <h1>Check your email</h1>
+    <p class="muted">We sent a 6-digit code to <b id="sentTo"></b>. It works for 10 minutes.</p>
+    <form id="codeForm" novalidate>
+      <label>Code
+        <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="123456">
+      </label>
+      <p class="msg" id="codeMsg" role="status" aria-live="polite" hidden></p>
+      <p class="hint">Check your spam folder</p>
+      <div class="acts">
+        <button id="signInBtn" type="submit">Sign in</button>
+        <button id="resendBtn" class="quiet" type="button">Send a new code</button>
+        <button id="otherBtn" class="link" type="button">Use a different email</button>
+      </div>
+    </form>
+  </section>
+
+  <p class="foot"><a href="/privacy">Privacy</a> · <span class="kk">{ kasah kod }</span></p>
 </main>
 <script>
 (function(){
   "use strict";
+  // Rules from worker/limits.js
+  const CODE_MINUTES = 10, RESEND_WAIT_MS = 60 * 1000;
+  const KEY = "dp:sign-in"; // {email, waitUntil}: a code was sent, so switching to the mail app and back keeps this step
   const $ = id => document.getElementById(id);
-  const params = new URLSearchParams(location.search);
-  const resetToken = params.get("token");
+  let pending = null, busy = false, verifying = false;
 
-  const MODES = {
-    signin: {title:"Sign in", intro:"Sign in to keep your tasks on your phone, iPad and Mac.", button:"Sign in", email:true, password:"current-password", links:["forgot"], alt:["New to MyDay?", "Create an account", "signup"]},
-    signup: {title:"Create an account", intro:"Use your email and a password of at least 8 characters. We'll send you a link to confirm your email.", button:"Create account", email:true, password:"new-password", links:[], alt:["Already have an account?", "Sign in", "signin"]},
-    forgot: {title:"Forgot password", intro:"Enter your email and we'll send you a link to choose a new password.", button:"Send reset link", email:true, password:null, links:["signin"]},
-    reset:  {title:"Choose a new password", intro:"At least 8 characters.", button:"Save new password", email:false, password:"new-password", links:[]},
-  };
-  let mode;
-
-  function show(m, message, isError){
-    mode = m;
-    const c = MODES[m];
-    $("title").textContent = c.title;
-    $("intro").textContent = c.intro;
-    $("submit").textContent = c.button;
-    $("emailField").hidden = !c.email;
-    $("passwordField").hidden = !c.password;
-    if (c.password) $("password").autocomplete = c.password;
-    document.querySelectorAll("[data-mode]").forEach(a=>{ a.hidden = !c.links.includes(a.dataset.mode); });
-    $("alt").hidden = !c.alt;
-    if (c.alt){ $("altText").textContent = c.alt[0]; $("altButton").textContent = c.alt[1]; $("altButton").dataset.to = c.alt[2]; }
-    say(message || "", isError);
+  function load(){
+    try {
+      const p = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (!p || typeof p.email!=="string" || typeof p.waitUntil!=="number") return null;
+      return Date.now() - (p.waitUntil - RESEND_WAIT_MS) < CODE_MINUTES * 60000 ? p : null; // not if that code has expired
+    } catch(e){ return null; }
   }
-  function say(text, isError){ $("msg").textContent = text; $("msg").className = isError ? "error" : ""; }
+  function save(p){ try { if (p) localStorage.setItem(KEY, JSON.stringify(p)); else localStorage.removeItem(KEY); } catch(e){} }
+  function lastEmail(){ try { const p = JSON.parse(localStorage.getItem(KEY) || "null"); return p && p.email || ""; } catch(e){ return ""; } }
+
+  // the message under the field of the step on screen
+  function say(text, isError){
+    ["emailMsg","codeMsg"].forEach(id=>{ $(id).textContent = ""; $(id).hidden = true; });
+    const m = $(pending ? "codeMsg" : "emailMsg");
+    m.textContent = text || ""; m.className = "msg"+(isError ? " error" : ""); m.hidden = !text;
+  }
+  const clock = s => Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+  const inWords = s => s < 90 ? s+" second"+(s===1?"":"s") : Math.ceil(s/60)+" minutes";
 
   async function post(path, body){
-    const r = await fetch("/api/auth/"+path, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body)});
+    let r;
+    try { r = await fetch("/api/auth/"+path, {method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body)}); }
+    catch(e){ const err = new Error("network"); err.status = 0; throw err; }
     const d = await r.json().catch(()=>({}));
-    if (!r.ok){ const e = new Error(d.message || "HTTP "+r.status); e.code = d.code; e.status = r.status; throw e; }
+    if (!r.ok){
+      const e = new Error(d.message || "HTTP "+r.status); e.code = d.code; e.status = r.status;
+      e.retryAfter = Number(r.headers.get("retry-after")) || 0; throw e;
+    }
     return d;
   }
 
-  function friendly(e){
-    if (!navigator.onLine) return "You're offline. Try again when you're back online.";
-    switch (e.code){
-      case "INVALID_EMAIL_OR_PASSWORD": return "That email and password don't match.";
-      case "INVALID_EMAIL": return "Please check the email address.";
-      case "PASSWORD_TOO_SHORT": return "Please use at least 8 characters.";
-      case "PASSWORD_TOO_LONG": return "Please use at most 128 characters.";
-      case "EMAIL_NOT_VERIFIED": return "Please confirm your email first. We've sent you a new link.";
-      case "INVALID_TOKEN": return "That link has expired or was already used. Ask for a new one below.";
-    }
+  const NETWORK = "Couldn't connect. Check your internet and try again.";
+  function sendError(e){
+    if (e.status===0 || !navigator.onLine) return NETWORK;
+    if (e.code==="TOO_SOON" && e.retryAfter) return "You can ask for a new code in "+inWords(e.retryAfter)+".";
+    if (e.status===429) return "Too many requests. Please wait a minute and try again.";
+    if (e.code==="INVALID_EMAIL") return "That email address doesn't look right.";
+    return "Couldn't send the code. Please try again.";
+  }
+  function codeError(e){
+    if (e.status===0 || !navigator.onLine) return NETWORK;
+    if (e.code==="INVALID_OTP") return "That code isn't right. Check the email and try again.";
+    if (e.code==="OTP_EXPIRED") return "That code has expired. Send a new code.";
+    if (e.code==="TOO_MANY_ATTEMPTS") return "Too many wrong tries. Send a new code.";
     if (e.status===429) return "Too many tries. Please wait a minute and try again.";
-    return "Something went wrong ("+e.message+"). Please try again.";
+    return "Couldn't sign you in. Please try again.";
   }
 
-  $("form").addEventListener("submit", async ev=>{
-    ev.preventDefault();
-    const email = $("email").value.trim(), password = $("password").value;
-    if (MODES[mode].email && !email) return say("Please enter your email.", true);
-    if (MODES[mode].password && !password) return say("Please enter a password.", true);
-    $("submit").disabled = true;
-    say("");
+  function render(){
+    $("emailStep").hidden = !!pending;
+    $("codeStep").hidden = !pending;
+    if (pending) $("sentTo").textContent = pending.email;
+    $("sendBtn").disabled = busy; $("sendBtn").textContent = busy && !pending ? "Sending…" : "Send code";
+    $("signInBtn").disabled = busy; $("signInBtn").textContent = busy && verifying ? "Signing in…" : "Sign in";
+    $("otherBtn").disabled = busy;
+    tick();
+  }
+  // the "Send a new code" countdown
+  function tick(){
+    if (!pending) return;
+    const wait = Math.max(0, Math.ceil((pending.waitUntil - Date.now()) / 1000));
+    $("resendBtn").disabled = busy || wait > 0;
+    $("resendBtn").textContent = wait > 0 ? "Send a new code in "+clock(wait) : "Send a new code";
+  }
+  setInterval(tick, 1000);
+
+  function remember(p){ save(p); pending = p; }
+
+  async function send(to){
+    const was = pending;
+    busy = true; render();
     try {
-      if (mode==="signin"){
-        await post("sign-in/email", {email, password, callbackURL:"/signin?mode=verified"});
-        location.replace("/?from=signin");
-        return;
-      }
-      if (mode==="signup"){
-        await post("sign-up/email", {email, password, name:"", callbackURL:"/signin?mode=verified"});
-        $("password").value = "";
-        show("signin", "Check your email. We've sent a link to "+email+". Open it to finish creating your account.");
-      } else if (mode==="forgot"){
-        await post("request-password-reset", {email, redirectTo:"/signin?mode=reset"});
-        show("signin", "If there's a MyDay account for "+email+", we've sent it a link to choose a new password.");
-      } else if (mode==="reset"){
-        await post("reset-password", {newPassword:password, token:resetToken});
-        $("password").value = "";
-        history.replaceState(null, "", "/signin");
-        show("signin", "Your new password is saved. You can sign in now.");
-      }
+      await post("email-otp/send-verification-otp", {email:to, type:"sign-in"});
+      remember({email:to, waitUntil:Date.now() + RESEND_WAIT_MS});
+      $("code").value = ""; say("");
     } catch(e){
-      say(friendly(e), true);
-      if (e.code==="INVALID_TOKEN") show("forgot", friendly(e), true);
+      // a code was sent a moment ago: carry on to the code step (and say why no new code is
+      // coming, unless it's just the usual one-minute wait from the email step)
+      if (e.code==="TOO_SOON" && e.retryAfter){
+        remember({email:to, waitUntil:Date.now() + e.retryAfter*1000});
+        say(was || e.retryAfter*1000 > RESEND_WAIT_MS ? sendError(e) : "", true);
+      } else say(sendError(e), true);
     }
-    $("submit").disabled = false;
+    busy = false; render();
+    if (pending) $("code").focus();
+  }
+
+  async function verify(value){
+    if (!pending || verifying) return;
+    if (!/^\d{6}$/.test(value)) return say("Enter the 6-digit code from the email.", true);
+    verifying = true; busy = true; render(); say("");
+    try {
+      const d = await post("sign-in/email-otp", {email:pending.email, otp:value});
+      save(null);
+      // a brand-new account sees the intro cards next; anyone else goes straight to their tasks
+      const created = Date.parse(d && d.user && d.user.createdAt);
+      location.replace("/?from=" + (created > Date.now() - 10*60000 ? "new" : "signin"));
+      return;
+    } catch(e){ say(codeError(e), true); }
+    verifying = false; busy = false; render();
+  }
+
+  $("emailForm").addEventListener("submit", ev=>{
+    ev.preventDefault();
+    const to = $("email").value.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return say("Enter your email address, e.g. you@example.com.", true);
+    send(to);
   });
+  $("codeForm").addEventListener("submit", ev=>{ ev.preventDefault(); verify($("code").value); });
+  $("code").addEventListener("input", ()=>{
+    const digits = $("code").value.replace(/\D/g,"").slice(0,6);
+    $("code").value = digits; say("");
+    if (digits.length===6) verify(digits); // a full code (typed or filled in from the email) signs in straight away
+  });
+  $("resendBtn").addEventListener("click", ()=>{ if (pending) send(pending.email); });
+  $("otherBtn").addEventListener("click", ()=>{ remember(null); $("code").value = ""; say(""); render(); $("email").focus(); });
 
-  function go(m){ show(m); $(MODES[m].email ? "email" : "password").focus(); }
-  document.querySelectorAll("[data-mode]").forEach(a=>a.addEventListener("click", ev=>{ ev.preventDefault(); go(a.dataset.mode); }));
-  $("altButton").addEventListener("click", ()=>go($("altButton").dataset.to));
-
-  // arriving from a link in an email
-  const m = params.get("mode"), error = params.get("error");
-  if (m==="verified" && !error){ location.replace("/?from=new"); return; } // email confirmed and signed in: the intro comes next
-  if (m==="verified") show("signin", "That confirmation link has expired or was already used. Sign in and we'll send you a new one.", true);
-  else if (m==="reset" && error) show("forgot", friendly({code:"INVALID_TOKEN"}), true);
-  else if (m==="reset" && resetToken) show("reset");
-  else show(m==="signup" ? "signup" : "signin");
+  pending = load();
+  $("email").value = lastEmail();
+  render();
+  if (!pending) $("email").focus();
 })();
 </script>
 </body>

@@ -32,7 +32,8 @@ npm run build && npm run dev:api # app + API at http://localhost:8787
 ```
 
 While `dev:api` runs, `npm run dev` forwards `/api` to it. Test sign-in on
-http://localhost:8787/signin (the address in `BETTER_AUTH_URL`).
+http://localhost:8787/signin (the address in `BETTER_AUTH_URL`). With `EMAIL_TO_CONSOLE=true`
+in `.dev.vars`, sign-in codes are printed in the `dev:api` terminal instead of being emailed.
 
 ## Database
 

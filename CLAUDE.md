@@ -10,7 +10,7 @@ our own, so MyDay works for Amin and for anyone else who signs in.
 
 ## What we're building — and only this
 1. **Online storage** for everyone's tasks (Cloudflare Worker + D1). *(built — see step 4)*
-2. **Email and password sign-in**, so each person sees only their own tasks.
+2. **Sign-in with an emailed code** (no passwords), so each person sees only their own tasks.
 3. **Sync**, so the same tasks appear on phone, iPad and Mac.
 4. **The new look** (Clear day, from Figma).
 
@@ -31,8 +31,7 @@ export/import, extra Settings screens, App Store work, analytics, conflict scree
   iCloud hosts the mailboxes hello@ and no-reply@; Resend (domain kasahkod.cc, Tokyo
   region, open/click tracking off) sends the app's account emails from no-reply@; DMARC
   reports go to no-reply@. Resend because Cloudflare is on the free plan.
-- Cloudflare Workers free plan: 10 ms CPU per request. Passwords use PBKDF2-SHA256 via Web
-  Crypto at 5,000 rounds (Amin's choice over upgrading), not Better Auth's scrypt (~65 ms).
+- Cloudflare Workers free plan: 10 ms CPU per request.
 
 ## How we work
 - Work directly on `main`. No branches, no pull requests. Pushing to `main` updates the
@@ -57,8 +56,17 @@ export/import, extra Settings screens, App Store work, analytics, conflict scree
    no-reply@kasahkod.cc (secret `RESEND_API_KEY`). Stay signed in for a long time
    (~60 days, renewing) so the installed app rarely asks again. A simple way to sign out.
    The app still works signed-out on one device.
-   - Plain privacy page at `/privacy`: what's stored (email, scrambled password, tasks),
-     where, Resend only for account emails, no tracking. Contact hello@kasahkod.cc.
+   - Plain privacy page at `/privacy`: what's stored (email, tasks, a sign-in record),
+     where, Resend only for sign-in codes, no tracking. Contact hello@kasahkod.cc.
+   - **Changed 7 Nov 2026 (Amin): sign-in is now the same as Quran Daily's** — no
+     passwords. `/signin` asks for an email, then the 6-digit code emailed to it (works 10
+     minutes, 5 wrong tries, stored hashed; a new code after 1 minute, at most 5 an hour
+     per email, `worker/limits.js`). A new email creates the account (then the intro); an
+     existing account keeps its tasks. Better Auth's limits per internet address are on
+     and kept in D1 (`rateLimit` table). Sessions keep no internet address or browser
+     details. Only the four sign-in routes the app uses are open (`worker/index.js`).
+     Settings has no "Change password". Old passwords were removed
+     (`migrations/0003_email_code.sql`). Locally, `EMAIL_TO_CONSOLE=true` prints codes.
 6. ✅ **Sync.** Connect device storage to online storage for signed-in users: send changes
    up, pull changes down, on open, on return to the app, on reconnect, and every ~30 s
    while open. Rule: the latest edit wins. Show the simple footer status (Synced /
@@ -102,8 +110,7 @@ export/import, extra Settings screens, App Store work, analytics, conflict scree
    Sign in / sign out live here only; the list footer keeps just the sync status.
    The gear is a cog (`public/icons/ui/settings.svg`, after Lucide), not Figma's
    sun-like icon, so it can't be confused with Today's sun (Amin, 16 Oct 2026).
-   - Account: email, **Change password** (emails the reset link), Sign out, **Delete my
-     account** — type DELETE to confirm; removes everything online
+   - Account: email, Sign out, **Delete my account** — type DELETE to confirm; removes everything online
      (`DELETE /api/account`) and also clears this device, then Welcome.
    - Appearance: System / Light / Dark, **per device** (`dp:theme`).
    - About: version **2.0**, Privacy, Contact hello@kasahkod.cc. Footer `{ kasah kod }`

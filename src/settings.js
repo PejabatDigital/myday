@@ -1,9 +1,9 @@
 /* Settings: its own page at /settings with a Back button. Opened from the gear in the header
    (phone, iPad) or "Settings" at the bottom of the Mac sidebar.
 
-   Account (email, change password by emailed link, sign out, delete my account — typed
-   DELETE to confirm), Appearance (System / Light / Dark, remembered on this device), and
-   About (version, privacy, contact). app.js supplies the account actions as hooks. */
+   Account (email, sign out, delete my account — typed DELETE to confirm; sign-in is by an
+   emailed code, so there's no password to change), Appearance (System / Light / Dark,
+   remembered on this device), and About (version, privacy, contact). app.js supplies the account actions as hooks. */
 export const VERSION = "2.0";
 const THEME = "dp:theme";
 
@@ -23,7 +23,7 @@ export function setTheme(t){
   });
 }
 
-/* hooks: user() → {email} or null; signIn(); signOut(); sendReset(email); deleteAccount() */
+/* hooks: user() → {email} or null; signIn(); signOut(); deleteAccount() */
 let hooks = null, view = "main";
 export function init(h){
   hooks = h;
@@ -63,7 +63,6 @@ function render(){
     <h2 class="sgh">Account</h2>
     ${u ? `<div class="card">
         <div class="srow"><span>Email</span><span class="v">${esc(u.email || "")}</span></div>
-        <button class="srow act" id="setPw">Change password</button>
         <button class="srow act" id="setOut">Sign out</button>
       </div>
       <p class="smsg" id="setMsg" role="status" aria-live="polite" hidden></p>
@@ -88,13 +87,6 @@ function render(){
   $("setBack").onclick = back;
   el.querySelectorAll("[data-theme-opt]").forEach(b=>b.onclick = ()=>{ setTheme(b.dataset.themeOpt); render(); });
   if (!u){ $("setIn").onclick = hooks.signIn; return; }
-  $("setPw").onclick = async ()=>{
-    if (offline()) return say("You're offline. Connect to change your password.", true);
-    $("setPw").disabled = true;
-    try { await hooks.sendReset(u.email); say(`We've sent a link to ${u.email}. Open it to choose a new password.`); }
-    catch(e){ say("Couldn't send the email. Please try again.", true); }
-    $("setPw").disabled = false;
-  };
   $("setOut").onclick = async ()=>{
     if (offline()) return say("You're offline. Connect to sign out, so nothing is left unsynced.", true);
     $("setOut").disabled = true;

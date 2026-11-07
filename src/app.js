@@ -776,11 +776,6 @@ settings.init({
     await flushAll(); await sync.run(); await signOut(); sync.stop(); S.user = null; setFoot();
     settings.close(); onb.signedOut(onb.close);
   },
-  sendReset: async email=>{
-    const r = await fetch("/api/auth/request-password-reset", {method:"POST", headers:{"content-type":"application/json"},
-      body:JSON.stringify({email, redirectTo:"/signin?mode=reset"})});
-    if (!r.ok) throw new Error("HTTP "+r.status);
-  },
   deleteAccount: async ()=>{
     await flushAll(); sync.stop();
     let r;

@@ -52,7 +52,7 @@ export function welcome(onNoAccount){
   navy("welcome", "Welcome to MyDay", "A calm daily list for your tasks and notes. Carry forward what's left, and pick up on any device.",
     `<button class="btn white" id="onbEmail" data-focus>Continue with email</button>
      <button class="btn ghost" id="onbLocal">Use without an account</button>
-     <p class="fine">New here? You can create an account on the next screen. By continuing you agree to the <a href="/privacy">privacy policy</a>.</p>`);
+     <p class="fine">New here? We'll send you a code, and that creates your account. By continuing you agree to the <a href="/privacy">privacy policy</a>.</p>`);
   document.getElementById("onbEmail").onclick = goSignIn;
   document.getElementById("onbLocal").onclick = ()=>{ chooseNoAccount(); onNoAccount(); };
 }
